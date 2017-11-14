@@ -1,3 +1,4 @@
+(* [diff] represents an ocaml diff object *)
 type diff
 
 (* [calc_diff base_content new_content] is the diff result between

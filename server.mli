@@ -3,7 +3,26 @@ open Opium.Std
 
 type version = int
 
-val cur_version: int
+(* ocaml representation of server config in "config.json". *)
+type config = {
+  server_name: string;
+  url: string;
+  token: string;
+  port: string;
+  version: int;
+}
+
+(* [init token] creates a caml_sync server directory structure in the current
+ * directory if it does not exist. It also initializes a "config.json" file.*)
+val init: string -> unit
+
+val load_config: unit -> config
+
+(* [verify token] is true if the token is correct. *)
+val verify: config -> string -> bool
+
+(* [calc_diff_by_version from to] *)
+val calc_diff_by_version: int -> int -> version_diff
 
 (* Handle GET request at "/version".
  * returns: a json containing [cur_version] to the client. *)
@@ -24,3 +43,10 @@ val handle_post_diff_from_client: App.builder
  * to the client. *)
 val handle_get_diff_from_client: App.builder
 
+(* usage:
+ *  caml_sync_server init <token> ->
+ *    inits the current directory as a server directory
+ *  caml_sync_server ->
+ *    runs the server
+ *)
+ val main : unit -> unit

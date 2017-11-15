@@ -16,12 +16,20 @@ type config = {
  * directory if it does not exist. It also initializes a "config.json" file.*)
 val init: string -> unit
 
+(* [load_config] loads the configuration of server if there's already a 
+ * configuration created for the server.
+ * TODO: what if hasnt init? reject or init?
+*)
 val load_config: unit -> config
 
-(* [verify token] is true if the token is correct. *)
+(* [verify token] is true if the token is correct.
+ * requires: [config] is a caml_sync configuration 
+*)
 val verify: config -> string -> bool
 
-(* [calc_diff_by_version from to] *)
+(* [calc_diff_by_version from to] is the difference between version [from] and
+ * version [to].
+*)
 val calc_diff_by_version: int -> int -> version_diff
 
 (* Handle GET request at "/version".

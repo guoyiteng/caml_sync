@@ -29,10 +29,10 @@ val update_diff : string list -> diff -> string list
  * represented by the diff json *)
 val parse_json : [> Ezjsonm.t ] -> diff
 
-(* [build_json diff_obj] returns the diff json of the ocaml diff object *)
+(* [build_json diff_obj] returns the diff json of the ocaml diff object*)
 val build_json : diff -> [> Ezjsonm.t ]
 
-(* [write_json json filename] *)
+(* [write_json json filename] writes the json to output file. *)
 val write_json : [> Ezjsonm.t ] -> string -> unit
 
 (* [create_file filename content] creates a new file named [filename]. [filename]
@@ -41,6 +41,6 @@ val write_json : [> Ezjsonm.t ] -> string -> unit
  * raise: [File_existed] if there has already existed a file at [filename]. *)
 val create_file : string -> string list -> unit
 
-(* [delete_file filename]
+(* [delete_file filename] deletes a file named [file].
  * raise: [File_not_found] *)
 val delete_file : string -> unit

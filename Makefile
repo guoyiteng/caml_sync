@@ -1,5 +1,4 @@
+server_template:
+	ocamlbuild -use-ocamlfind server_template.native && ./server_template.native
 install:
-	opam install cohttp lwt js_of_ocaml cohttp-lwt-unix
-	opam update
-	opam upgrade
-	opam install cohttp-lwt-unix
+	opam install opium

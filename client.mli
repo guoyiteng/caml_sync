@@ -24,10 +24,13 @@ val get_update_diff : config -> version_diff
 *)
 val check_modified_files : unit -> string list
 
-(* [check_both_modified_files modified_files version_diff] *)
+(* [check_both_modified_files modified_files version_diff] is a list of filenames
+ * that the local working version and the remote server version are both different
+ * from the backup version in the hidden folder. *)
 val check_both_modified_files : string list -> version_diff -> string list
 
-(* [rename_both_modified both_modified] *)
+(* [rename_both_modified both_modified] rename local files with merge conflicts 
+ * to "filename_local.txt". *)
 val rename_both_modified : string list -> unit
 
 (* [compare_file filename] is the diff that the user has made since the 

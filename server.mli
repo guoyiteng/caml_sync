@@ -16,9 +16,9 @@ type config = {
  * directory if it does not exist. It also initializes a "config.json" file.*)
 val init: string -> unit
 
-(* [load_config] loads the configuration of server if there's already a 
+(* [load_config _] loads the configuration of server if there's already a 
  * configuration created for the server.
- * TODO: what if hasnt init? reject or init?
+ * require: ".config" must exist in the current directory.
 *)
 val load_config: unit -> config
 

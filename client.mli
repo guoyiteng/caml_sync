@@ -41,13 +41,13 @@ val rename_both_modified : string list -> unit
 val compare_file : string -> file_diff
 
 (* [compare_working_backup both_modified] compares all the files in current 
- * working directory to the backup version. The backup version is the latest
- * sync with the server. 
+ * working directory to the backup version. The backup version is the previous
+ * local version in the hidden directory ".caml_sync/".
 *)
-val compare_working_backup : string_list -> version_diff
+val compare_working_backup : string list -> version_diff
 
 (* [backup_working_files _] makes a copy for all the files in current working 
-* directory.
+* directory and backup them in ".caml_sync/".
 *)
 val backup_working_files : unit -> unit
 

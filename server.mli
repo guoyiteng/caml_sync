@@ -5,7 +5,7 @@ type version = int
 
 (* ocaml representation of server config in "config.json". *)
 type config = {
-  server_name: string;
+  server_id: string;
   url: string;
   token: string;
   port: string;

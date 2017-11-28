@@ -8,6 +8,8 @@ client:
 	ocamlbuild -use-ocamlfind client.byte
 	rm client/client.byte
 	mv client.native client/client.byte
+check:
+	bash checktypes.sh
 debug:
 	ocamlbuild -use-ocamlfind -tag 'debug' debug.byte
 cleanup:

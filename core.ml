@@ -70,24 +70,26 @@ let build_json diff_obj = failwith "todo"
 
 let write_json w_json filename = failwith "todo"
 
-(* create a directory named [file_dir] if it currently does not exist *)
-let create_dir file_dir =
-  if file_dir = "" then () else
-  try ignore (Sys.is_directory file_dir);() with
-  | Sys_error _ -> Unix.mkdir file_dir 0o770
+(* create a directory given by information in [filename],
+ * given that it currently does not exist *)
+let create_dir filename =
+  let lst_split = String.split_on_char '/' filename in
+  let rec inc_dir_create lst acc =
+    (* incrementally create directories *)
+    match lst with
+      | [] | _::[]-> ()
+      | h::t ->
+        let new_acc = acc ^ h ^ Filename.dir_sep in
+          try ignore (Sys.is_directory new_acc); inc_dir_create t new_acc with
+          | Sys_error _ -> Unix.mkdir new_acc 0o770; inc_dir_create t new_acc in
+  inc_dir_create lst_split ""
 
 let create_file filename content =
   if Sys.file_exists filename
   then raise (File_existed "Error when creating file")
   else
-    (* check if directory create directory if necessary. *)
-    let lst_split = String.split_on_char '/' filename in
-    let rec merge_seps lst acc =
-      match lst with
-      | [] | _::[]-> acc
-      | h::t -> merge_seps t (acc ^ h ^ Filename.dir_sep) in
-    let file_dir = merge_seps lst_split "" in
-    let _ = create_dir file_dir in
+    (* create directory if necessary. *)
+    let _ = create_dir filename in
     let rec print_content channel = function
       | [] -> ()
       | h::t -> Printf.fprintf channel "%s\n" h; print_content channel t

@@ -16,7 +16,7 @@ type config = {
 let config = ref {
     server_id = "default";
     url = "localhost";
-    token = "wilsonsb";
+    token = "password";
     port = 8080;
     version = 0;
   }
@@ -34,8 +34,16 @@ let verify c token =
 let calc_diff_by_version v_from v_to =
   raise Unimplemented
 
-let handle_get_current_version = get "/version" begin fun req ->
-    `String ("Hello World") |> respond'
+let handle_get_current_version = get "/version/:token" begin fun req ->   
+    let token = param req "token" in
+    if token = (!config.token) then
+      `Json (
+        let open Ezjsonm in
+        dict ["version", int (!config.version)]
+      ) |> respond'
+    else
+      `String ("Unauthorized Access") |> respond' ~code:`Unauthorized
+
   end
 
 let handle_post_diff_from_client = post "/diff" begin fun

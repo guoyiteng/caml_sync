@@ -1,7 +1,7 @@
 svr:
-	ocamlbuild -use-ocamlfind server.native
-	rm -f server/server.native
-	mv server.native server/server.native
+	ocamlbuild -use-ocamlfind caml_sync_server.native
+	rm -f server/caml_sync_server.native
+	mv caml_sync_server.native server/caml_sync_server.native
 server_template:
 	ocamlbuild -use-ocamlfind server_template.native && ./server_template.native
 runclient:

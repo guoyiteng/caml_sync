@@ -45,15 +45,12 @@ let load_config () =
     version = extract_int "version";
   }
 
-
-let verify c token =
-  raise Unimplemented
-
 let calc_diff_by_version v_from v_to =
   raise Unimplemented
 
 let handle_get_current_version = get "/version/:token" begin fun req ->   
     let token = param req "token" in
+    (* load config from config.json *)
     let config = load_config () in    
     if token = config.token then
       `Json (
@@ -67,12 +64,51 @@ let handle_get_current_version = get "/version/:token" begin fun req ->
 
 let handle_post_diff_from_client = post "/diff/:token" begin fun
     req ->
-    raise Unimplemented 
+    let token = param req "token" in
+    let config = load_config () in
+    if token = config.token then
+      raise Unimplemented
+    else
+      `String ("Unauthorized Access") |> respond' ~code:`Unauthorized
   end
+
+let build_version_diff_json v_diff =
+  let open Ezjsonm in
+  dict [
+    "prev_version", (int v_diff.prev_version);
+    "cur_version", (int v_diff.cur_version);
+    "edited_files", list (
+      fun f_diff -> dict [
+          "file_name", (string f_diff.file_name);
+          "is_directory", (bool f_diff.is_directory);
+          "content_diff", (build_json f_diff.content_diff);
+        ]
+    ) v_diff.edited_files;
+  ]
 
 let handle_get_diff_from_client = get "/diff/:token" begin fun
     req ->
-    raise Unimplemented
+    let token = param req "token" in
+    let config = load_config () in
+    if token = config.token then
+      match "from" |> Uri.get_query_param (Request.uri req) with
+      | Some from_str -> begin
+          let is_int s =
+            try ignore (int_of_string s); true
+            with _ -> false in
+          if is_int from_str then
+            let from = int_of_string from_str in
+            let v_diff = calc_diff_by_version from config.version in 
+            let json = build_version_diff_json v_diff in
+            `Json (
+              json
+            ) |> respond'
+          else
+            `String ("Parameter [from] is illegal.") |> respond' ~code:`Bad_request
+        end
+      | None -> `String ("Parameter [from] is required.") |> respond' ~code:`Bad_request
+    else
+      `String ("Unauthorized Access") |> respond' ~code:`Unauthorized
   end
 
 let main () =

@@ -14,8 +14,8 @@ type version_diff = {
   edited_files: file_diff list
 }
 
-exception File_existed
-exception File_not_found
+exception File_existed of string
+exception File_not_found of string
 
 let calc_diff base_content new_content =
   let base_delete =
@@ -76,7 +76,8 @@ let create_dir file_dir =
   | Sys_error _ -> Unix.mkdir file_dir 0o666
 
 let create_file filename content =
-  if Sys.file_exists filename then raise File_existed
+  if Sys.file_exists filename
+  then raise (File_existed "Error when creating file")
   else
     (* check if directory create directory if necessary. *)
     let lst_split = String.split_on_char '/' filename in
@@ -94,4 +95,4 @@ let create_file filename content =
 
 let delete_file filename =
   try Sys.remove filename
-  with Sys_error _ -> raise File_not_found
+  with Sys_error _ -> raise (File_not_found "Cannot remove file")

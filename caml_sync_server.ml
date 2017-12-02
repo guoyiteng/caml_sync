@@ -45,15 +45,12 @@ let load_config () =
     version = extract_int "version";
   }
 
-
-let verify c token =
-  raise Unimplemented
-
 let calc_diff_by_version v_from v_to =
   raise Unimplemented
 
 let handle_get_current_version = get "/version/:token" begin fun req ->   
     let token = param req "token" in
+    (* load config from config.json *)
     let config = load_config () in    
     if token = config.token then
       `Json (
@@ -67,7 +64,7 @@ let handle_get_current_version = get "/version/:token" begin fun req ->
 
 let handle_post_diff_from_client = post "/diff/:token" begin fun
     req ->
-    raise Unimplemented 
+    raise Unimplemented
   end
 
 let handle_get_diff_from_client = get "/diff/:token" begin fun

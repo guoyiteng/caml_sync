@@ -64,20 +64,23 @@ let apply_diff base_content diff_content =
       end
   in List.rev (match_op 1 diff_content [])
 
+let extract_string json key = Ezjsonm.(get_string (find json [key]))
+
+let extract_int json key = Ezjsonm.(get_int (find json [key]))
+
+let extract_strlist json key = Ezjsonm.(get_strings (find json [key]))
+
 let parse_json diff_json =
   let open Ezjsonm in
   get_list
     (fun elem ->
-      let extract_string key = Ezjsonm.(get_string (find elem [key])) in
-      let extract_int key = Ezjsonm.(get_int (find elem [key])) in
-      let extract_strlst key = Ezjsonm.(get_strings (find elem [key])) in
-      let op = extract_string "op" in
-      let line_index = extract_int "line" in
-      let content = extract_strlist "content" in
-      if op = "del" then Delete line_index
-      else if op = "ins" then Insert (line_index, content)
-      else failwith "Error when parsing json"
-    ) diff_json
+       let op = extract_string elem "op" in
+       let line_index = extract_int elem "line" in
+       let content = extract_strlist elem "content" in
+       if op = "del" then Delete line_index
+       else if op = "ins" then Insert (line_index, content)
+       else failwith "Error when parsing json"
+    ) (unwrap diff_json)
 
 let build_json diff_obj =
   let open Ezjsonm in
@@ -92,9 +95,29 @@ let build_json diff_obj =
               ("content", to_json_strlist [""])]
       | Insert (index, str_lst) ->
         dict [("op", string "ins");
-         ("line", int index);
-         ("content", to_json_strlist str_lst)]
+              ("line", int index);
+              ("content", to_json_strlist str_lst)]
     ) diff_obj
+
+
+(* [build_version_diff_json v_diff] is a json representing the ocaml type
+ * [version_diff]. *)
+let build_version_diff_json v_diff =
+  let open Ezjsonm in
+  dict [
+    "prev_version", (int v_diff.prev_version);
+    "cur_version", (int v_diff.cur_version);
+    "edited_files", list (
+      fun f_diff -> dict [
+          "file_name", (string f_diff.file_name);
+          "is_directory", (bool f_diff.is_directory);
+          "content_diff", (build_json f_diff.content_diff);
+        ]
+    ) v_diff.edited_files;
+  ]
+
+let parse_version_diff_json v_json =
+  failwith "todo"
 
 let write_json w_json filename = failwith "todo"
 
@@ -105,11 +128,11 @@ let create_dir filename =
   let rec inc_dir_create lst acc =
     (* incrementally create directories *)
     match lst with
-      | [] | _::[]-> ()
-      | h::t ->
-        let new_acc = acc ^ h ^ Filename.dir_sep in
-          try ignore (Sys.is_directory new_acc); inc_dir_create t new_acc with
-          | Sys_error _ -> Unix.mkdir new_acc 0o770; inc_dir_create t new_acc in
+    | [] | _::[]-> ()
+    | h::t ->
+      let new_acc = acc ^ h ^ Filename.dir_sep in
+      try ignore (Sys.is_directory new_acc); inc_dir_create t new_acc with
+      | Sys_error _ -> Unix.mkdir new_acc 0o770; inc_dir_create t new_acc in
   inc_dir_create lst_split ""
 
 let create_file filename content =

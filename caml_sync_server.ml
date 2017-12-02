@@ -35,14 +35,12 @@ let init token =
 let load_config () =
   let open Ezjsonm in
   let json = Ezjsonm.from_channel (open_in "config.json") in
-  let extract_string name = Ezjsonm.(get_string (find json [name])) in
-  let extract_int name = Ezjsonm.(get_int (find json [name])) in
   {
-    server_id = extract_string "server_id";
-    url = extract_string "url";
-    token = extract_string "token";
-    port = extract_int "port";
-    version = extract_int "version";
+    server_id = extract_string json "server_id";
+    url = extract_string json "url";
+    token = extract_string json "token";
+    port = extract_int json "port";
+    version = extract_int json "version";
   }
 
 let calc_diff_by_version v_from v_to =
@@ -67,24 +65,12 @@ let handle_post_diff_from_client = post "/diff/:token" begin fun
     let token = param req "token" in
     let config = load_config () in
     if token = config.token then
-      raise Unimplemented
+      req |> App.json_of_body_exn |> Lwt.map (fun req_json -> 
+          raise Unimplemented
+        )
     else
       `String ("Unauthorized Access") |> respond' ~code:`Unauthorized
   end
-
-let build_version_diff_json v_diff =
-  let open Ezjsonm in
-  dict [
-    "prev_version", (int v_diff.prev_version);
-    "cur_version", (int v_diff.cur_version);
-    "edited_files", list (
-      fun f_diff -> dict [
-          "file_name", (string f_diff.file_name);
-          "is_directory", (bool f_diff.is_directory);
-          "content_diff", (build_json f_diff.content_diff);
-        ]
-    ) v_diff.edited_files;
-  ]
 
 let handle_get_diff_from_client = get "/diff/:token" begin fun
     req ->

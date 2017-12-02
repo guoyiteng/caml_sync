@@ -70,9 +70,10 @@ let parse_json diff_json =
     (fun elem ->
       let extract_string key = Ezjsonm.(get_string (find elem [key])) in
       let extract_int key = Ezjsonm.(get_int (find elem [key])) in
+      let extract_strlst key = [""] in
       let op = extract_string "op" in
       let line_index = extract_int "line" in
-      let content = [""] in
+      let content = extract_strlist "content" in
       if op = "del" then Delete line_index
       else if op = "ins" then Insert (line_index, content)
       else failwith "Error when parsing json"

@@ -13,8 +13,8 @@ type version_diff = {
   edited_files: file_diff list
 }
 
-exception File_existed
-exception File_not_found
+exception File_existed of string
+exception File_not_found of string
 
 (* [calc_diff base_content new_content] returns the difference between
  * [base_content] and [new_content] *)

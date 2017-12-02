@@ -7,6 +7,12 @@ type config = {
   version: int;
 }
 
+(* [load_config _ ] loads the config file of client *)
+val load_config : unit -> config
+
+(* [update_config config] updates the [.config] file with [config] *)
+val update_config : config -> unit
+
 (* [get_latest_version config] makes a query to the server and returns
  * the server's current version number *)
 val get_latest_version : config -> int
@@ -56,7 +62,6 @@ val backup_working_files : unit -> unit
  * Users can change this [url] and [token] manually in ".config". *)
 val init : string -> string -> unit
 
-(* [load_config] loads the configuration of client if there is already a
- * configuration created for the server.
+(* Performs all the sync stuff
  *)
-val load_config : unit -> config
+val sync : unit -> unit

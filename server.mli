@@ -9,7 +9,7 @@ type config = {
   url: string;
   token: string;
   port: int;
-  version: int;
+  mutable version: int;
 }
 
 (* [init token] creates a caml_sync server directory structure in the current

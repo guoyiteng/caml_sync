@@ -1,7 +1,6 @@
 (* [diff] represents an ocaml diff object between contents *)
 type diff
 
-
 type file_diff = {
   file_name: string;
   is_directory: bool;
@@ -29,11 +28,11 @@ val update_diff : string list -> diff -> string list
  * represented by the diff json *)
 val parse_json : [> Ezjsonm.t ] -> diff
 
-(* [build_json diff_obj] returns the diff json containing all the information 
+(* [build_json diff_obj] returns the diff json containing all the information
  * in the ocaml diff object [diff] *)
 val build_json : diff -> [> Ezjsonm.t ]
 
-(* [write_json json filename] writes the json to an output file specified by [filename] *)
+(* [write_json w_json filename] writes the json to an output file specified by [filename] *)
 val write_json : [> Ezjsonm.t ] -> string -> unit
 
 (* [create_file filename content] creates a new file named [filename]. [filename]

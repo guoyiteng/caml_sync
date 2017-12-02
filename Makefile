@@ -17,3 +17,6 @@ cleanup:
 	ocamlbuild -clean
 install:
 	opam install opium
+test:
+	ocamlbuild -use-ocamlfind core_test.byte
+	./core_test.byte

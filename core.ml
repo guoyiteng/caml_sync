@@ -70,8 +70,28 @@ let build_json diff_obj = failwith "todo"
 
 let write_json w_json filename = failwith "todo"
 
-let create_file filename content = failwith "todo"
+(* create a directory named [file_dir] if it currently does not exist *)
+let create_dir file_dir =
+  try ignore (Sys.is_directory file_dir);() with
+  | Sys_error _ -> Unix.mkdir file_dir 0o666
+
+let create_file filename content =
+  if Sys.file_exists filename then raise File_existed
+  else
+    (* check if directory create directory if necessary. *)
+    let lst_split = String.split_on_char '/' filename in
+    let rec merge_seps lst acc =
+      match lst with
+      | [] | _::[]-> acc
+      | h::t -> merge_seps t (acc ^ h ^ Filename.dir_sep) in
+    let file_dir = merge_seps lst_split "" in
+    let _ = create_dir file_dir in
+    let rec print_content channel = function
+      | [] -> ()
+      | h::t -> Printf.fprintf channel "%s\n" h; print_content channel t
+    in let oc = open_out filename in
+    print_content oc content; close_out oc
 
 let delete_file filename =
   try Sys.remove filename
-  with Sys_error _ -> raise File_not_found 
+  with Sys_error _ -> raise File_not_found

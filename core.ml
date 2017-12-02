@@ -1,6 +1,10 @@
-type diff = Delete of string | Insert of string list
+type command = Delete of string | Insert of string list
 
-let calc_diff base_content new_content = failwith "todo"
+type diff = command list
+
+let calc_diff base_content new_content =
+  List.fold_right
+    (fun elem acc -> (Delete elem)::acc) base_content [Insert new_content]
 
 let update_diff base_content diff_content = failwith "todo"
 

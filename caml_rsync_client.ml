@@ -16,14 +16,14 @@ let load_config () =
     let dict = get_dict (from_channel (open_in ".config")) in
     try
     {
-      client_id: get_string (List.assoc "client_id" dict);
-      url: get_string (List.assoc "url" dict);
-      token: get_string (List.assoc "token" dict);
-      version: get_int (List.assoc "version" int);
+      client_id = get_string (List.assoc "client_id" dict);
+      url = get_string (List.assoc "url" dict);
+      token = get_string (List.assoc "token" dict);
+      version = get_int (List.assoc "version" dict);
     }
     with
-    | Not_found -> print_endline "Fails to load [.config]: incorrect format"
-    | _ -> print_endline "Unexpected Error"
+    | Not_found -> failwith("Fails to load [.config]: incorrect format")
+    | _ -> failwith("Unexpected Error")
   with
   | Sys_error e ->
     print_endline "Cannot find .config. Directory seems have not
@@ -94,13 +94,13 @@ let init url token =
         has already been initialized into a caml_sync client directory")
     else
       let config = {
-        client_id: "TODO";
-        url: url;
-        token: token;
-        version: 0
+        client_id = "TODO";
+        url = url;
+        token = token;
+        version = 0
       } in
       update_config config;
-      sync _
+      sync ()
   | _ -> print_endline "The address you entered does not seem to be a valid caml_sync address"
 
 let sync () =
@@ -114,21 +114,21 @@ let sync () =
 *)
 let () =
   if Array.length Sys.argv = 0 then
-    sync _
+    sync ()
   else
-  if (Array.length Sys.argv) = 3 && (Array.get Sys.argv 0) = "init" then
-    let () = print_endline "You are initializing the current directory as a
-      caml_sync directory; Please indicate the address of the server you are
-      linking to:\n" in
-    match read_line () with
-    | exception End_of_file -> ()
-    | url ->
+    if (Array.length Sys.argv) = 3 && (Array.get Sys.argv 0) = "init" then
+      let () = print_endline "You are initializing the current directory as a
+        caml_sync directory; Please indicate the address of the server you are
+        linking to:\n" in
       match read_line () with
       | exception End_of_file -> ()
-      | token -> let () = print_endline
-                     ("Please enter the password for the server at "
-                      ^ url ^ " to connect to the server:\n") in
-        init url token
+      | url ->
+        match read_line () with
+        | exception End_of_file -> ()
+        | token -> let () = print_endline
+                       ("Please enter the password for the server at "
+                        ^ url ^ " to connect to the server:\n") in
+          init url token
     else
       print_endline "usage:\n
         caml_sync init <url> <token> ->\n

@@ -8,7 +8,7 @@ type config = {
   server_id: string;
   url: string;
   token: string;
-  port: string;
+  port: int;
   version: int;
 }
 

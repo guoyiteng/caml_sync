@@ -6,9 +6,10 @@ runserver:
 server_template:
 	ocamlbuild -use-ocamlfind server_template.native && ./server_template.native
 runclient:
-	ocamlbuild -use-ocamlfind client.byte
-	rm client/client.byte
-	mv client.native client/client.byte
+	ocamlbuild -use-ocamlfind client.native
+	rm -f client/client.native
+	mv client.native client/client.native
+	./client/client.native
 check:
 	bash checktypes.sh
 debug:

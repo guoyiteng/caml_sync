@@ -22,11 +22,6 @@ val init: string -> unit
  *)
 val load_config: unit -> config
 
-(* [verify c token] returns true if the token is valid.
- * requires: [config] is a valid caml_sync configuration
-*)
-val verify: config -> string -> bool
-
 (* [calc_diff_by_version v_from v_to] returns the difference between version [from] and
  * version [to].
 *)

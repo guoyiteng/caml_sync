@@ -11,10 +11,44 @@ type config = {
 }
 
 let load_config () =
-  failwith("unimplemented")
+  try
+    let open Ezjsonm in
+    let dict = get_dict (from_channel (open_in ".config")) in
+    try
+    {
+      client_id: get_string (List.assoc "client_id" dict);
+      url: get_string (List.assoc "url" dict);
+      token: get_string (List.assoc "token" dict);
+      version: get_int (List.assoc "version" int);
+    }
+    with
+    | Not_found -> print_endline "Fails to load [.config]: incorrect format"
+    | _ -> print_endline "Unexpected Error"
+  with
+  | Sys_error e ->
+    print_endline "Cannot find .config. Directory seems have not
+      been initialized into a cmal_sync directory";
+    print_endline e
+  | _ -> print_endline "Unexpected internal error"
+
 
 let update_config config =
-  failwith("unimplemented")
+  try
+    let open Ezjsonm in
+    let json =
+      dict [
+        "client_id", (string config.client_id);
+        "url", (string config.url);
+        "token", (string config.token);
+        "version", (int config.version);
+      ] in
+    to_channel (open_out ".config") json
+  with
+  | Sys_error e ->
+    print_endline "Cannot find .config. Directory seems have not
+      been initialized into a cmal_sync directory";
+    print_endline e
+  | _ -> print_endline "Unexpected internal error"
 
 let get_latest_version config =
   failwith("unimplemented")
@@ -53,16 +87,17 @@ let init url token =
   body |> Cohttp_lwt.Body.to_string >|= fun body ->
   let open Ezjsonm in
   match (from_string body) with
+  (* Only allowed json body format; version keyword must appears first *)
   | `O [("version", v )::_] ->
     if Sys.file_exists ".config" then
       raise (File_existed "[.config] already exsits; it seems like the current directory
         has already been initialized into a caml_sync client directory")
     else
       let config = {
-        client_id = "TODO";
-        url = url;
-        token = token;
-        version = 0
+        client_id: "TODO";
+        url: url;
+        token: token;
+        version: 0
       } in
       update_config config;
       sync _

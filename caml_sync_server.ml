@@ -14,7 +14,10 @@ type config = {
   version: int;
 }
 
-let config = {
+(* [(filename, [line1; line2; line3]); ...] *)
+type state = (string * string list) list
+
+let default_config = {
   server_id = "default";
   url = "localhost";
   token = "password";
@@ -25,11 +28,11 @@ let config = {
 
 let init token =
   let open Ezjsonm in
-  dict ["server_id", (string config.server_id);
-        "url", (string config.url);
+  dict ["server_id", (string default_config.server_id);
+        "url", (string default_config.url);
         "token", (string token);
-        "port", (int config.port);
-        "version", (int config.version)] 
+        "port", (int default_config.port);
+        "version", (int default_config.version)] 
   |> Ezjsonm.to_channel (open_out "config.json")
 
 let load_config () =
@@ -42,6 +45,12 @@ let load_config () =
     port = extract_int json "port";
     version = extract_int json "version";
   }
+
+let calc_version_diff_between_states state1 state2 =
+  raise Unimplemented
+
+let apply_version_diff_to_state version_diff state =
+  raise Unimplemented
 
 let calc_diff_by_version v_from v_to =
   raise Unimplemented

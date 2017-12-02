@@ -26,7 +26,34 @@ let calc_diff base_content new_content =
   (Insert (0, new_content))::base_delete
 
 let update_diff base_content diff_content =
-  failwith "todo"
+  let rec match_command cur_index diff_lst acc =
+    match diff_lst with
+    | [] ->
+      if cur_index > List.length base_content then acc
+      else let cur_elem = List.nth base_content (cur_index-1) in
+        match_command (cur_index+1) diff_lst (cur_elem::acc)
+    | h::t ->
+      begin match h with
+        | Delete ind ->
+          if cur_index = ind then
+            match_command (cur_index+1) t acc
+          else if cur_index < ind then
+            let cur_elem = List.nth base_content (cur_index-1) in
+            match_command (cur_index+1) diff_lst (cur_elem::acc)
+          else failwith "should not happen in update_diff"
+        | Insert (ind, str_lst) ->
+          if ind = 0 then
+            match_command cur_index t (List.rev str_lst)
+          else if cur_index < ind then
+            let cur_elem = List.nth base_content (cur_index-1) in
+            match_command (cur_index+1) diff_lst (cur_elem::acc)
+          else if cur_index = ind then
+            let cur_elem = List.nth base_content (cur_index-1) in
+            let new_lst = List.rev (cur_elem::str_lst) in
+            match_command (cur_index+1) t (new_lst @ acc)
+          else failwith "should not happen in update_diff"
+      end
+  in List.rev (match_command 1 diff_content [])
 
 let parse_json diff_json = failwith "todo"
 

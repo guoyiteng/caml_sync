@@ -4,7 +4,7 @@ type diff = op list
 
 type file_diff = {
   file_name: string;
-  is_directory: bool;
+  is_deleted: bool;
   content_diff: diff;
 }
 
@@ -70,18 +70,6 @@ let extract_int json key = Ezjsonm.(get_int (find json [key]))
 
 let extract_strlist json key = Ezjsonm.(get_strings (find json [key]))
 
-let parse_json diff_json =
-  let open Ezjsonm in
-  get_list
-    (fun elem ->
-       let op = extract_string elem "op" in
-       let line_index = extract_int elem "line" in
-       let content = extract_strlist elem "content" in
-       if op = "del" then Delete line_index
-       else if op = "ins" then Insert (line_index, content)
-       else failwith "Error when parsing json"
-    ) (unwrap diff_json)
-
 let build_json diff_obj =
   let open Ezjsonm in
   let to_json_strlist str_lst =
@@ -99,6 +87,17 @@ let build_json diff_obj =
               ("content", to_json_strlist str_lst)]
     ) diff_obj
 
+let parse_json diff_json =
+  let open Ezjsonm in
+  get_list
+    (fun elem ->
+       let op = extract_string elem "op" in
+       let line_index = extract_int elem "line" in
+       let content = extract_strlist elem "content" in
+       if op = "del" then Delete line_index
+       else if op = "ins" then Insert (line_index, content)
+       else failwith "Error when parsing json"
+    ) (unwrap diff_json)
 
 (* [build_version_diff_json v_diff] is a json representing the ocaml type
  * [version_diff]. *)

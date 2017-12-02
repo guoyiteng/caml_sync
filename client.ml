@@ -3,6 +3,13 @@ open Lwt
 open Cohttp
 open Cohttp_lwt_unix
 
+type config = {
+  client_id: string;
+  url: string;
+  token: string;
+  version: int;
+}
+
 let get_latest_version config =
   failwith("unimplemented")
 
@@ -46,7 +53,7 @@ let () =
   if Array.length Sys.argv = 0 then
     failwith("unimplemented")
   else
-    if (Array.length Sys.arv 3) = "init" && (Array.get Sys.arv 0) = "init" then
+  if (Array.length Sys.argv) = 3 && (Array.get Sys.argv 0) = "init" then
     let () = print_endline "You are initializing the current directory as a
       caml_sync directory; Please indicate the address of the server you are
       linking to:\n" in
@@ -56,12 +63,12 @@ let () =
       match read_line () with
       | exception End_of_file -> ()
       | token -> let () = print_endline
-                     "Please enter the password for the server at "
-                          + url + " to connect to the server:\n" in
+                     ("Please enter the password for the server at "
+                      ^ url ^ " to connect to the server:\n") in
         init url token
     else
       print_endline "usage:\n
-        \tcaml_sync init <url> <token> ->\n
-        \t\tinits the current directory as a client directory
-        \tcaml_sync ->\n
-        \t\tsyncs files in local directories with files in server\n"
+        caml_sync init <url> <token> ->\n
+        \tinits the current directory as a client directory
+        caml_sync ->\n
+        \tsyncs files in local directories with files in server\n"

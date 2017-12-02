@@ -20,9 +20,9 @@ exception File_not_found of string
  * [base_content] and [new_content] *)
 val calc_diff : string list -> string list -> diff
 
-(* [update_diff base_content diff_content] returns the result after applying the changes in
+(* [apply_diff base_content diff_content] returns the result after applying the changes in
  * [diff_content] to [base_content] *)
-val update_diff : string list -> diff -> string list
+val apply_diff : string list -> diff -> string list
 
 (* [parse_json diff_json] returns an ocaml diff object
  * represented by the diff json *)

@@ -1,6 +1,6 @@
-type command = Delete of int | Insert of (int * string list)
+type op = Delete of int | Insert of (int * string list)
 
-type diff = command list
+type diff = op list
 
 type file_diff = {
   file_name: string;
@@ -26,47 +26,85 @@ let calc_diff base_content new_content =
     in add_delete (List.length base_content) [] in
   (Insert (0, new_content))::base_delete
 
-let update_diff base_content diff_content =
+let apply_diff base_content diff_content =
   (* go over every element in base_content, and compare the line number with
    * information in diff_content, in order to see whether the current line
    * should be kept, deleted, or followed by some new lines. *)
-  let rec match_command cur_index diff_lst acc =
+  let rec match_op cur_index diff_lst acc =
     (* new content willl be saved in acc, in reverse order*)
     match diff_lst with
     | [] ->
       if cur_index > List.length base_content then acc
       else let cur_elem = List.nth base_content (cur_index-1) in
-        match_command (cur_index+1) diff_lst (cur_elem::acc)
+        match_op (cur_index+1) diff_lst (cur_elem::acc)
     | h::t ->
       begin match h with
         | Delete ind ->
           if cur_index = ind then
             (* move on to the next line. Do not add anything to acc *)
-            match_command (cur_index+1) t acc
+            match_op (cur_index+1) t acc
           else if cur_index < ind then
             (* copy current line from base_content to acc *)
             let cur_elem = List.nth base_content (cur_index-1) in
-            match_command (cur_index+1) diff_lst (cur_elem::acc)
+            match_op (cur_index+1) diff_lst (cur_elem::acc)
           else failwith "should not happen in update_diff"
         | Insert (ind, str_lst) ->
           if ind = 0 then
-            match_command cur_index t (List.rev str_lst)
+            match_op cur_index t (List.rev str_lst)
           else if cur_index < ind then
             (* copy current line from base_content to acc *)
             let cur_elem = List.nth base_content (cur_index-1) in
-            match_command (cur_index+1) diff_lst (cur_elem::acc)
+            match_op (cur_index+1) diff_lst (cur_elem::acc)
           else if cur_index = ind then
             (* insert lines after current line *)
             let cur_elem = List.nth base_content (cur_index-1) in
             let new_lst = List.rev (cur_elem::str_lst) in
-            match_command (cur_index+1) t (new_lst @ acc)
+            match_op (cur_index+1) t (new_lst @ acc)
           else failwith "should not happen in update_diff"
       end
-  in List.rev (match_command 1 diff_content [])
+  in List.rev (match_op 1 diff_content [])
 
-let parse_json diff_json = failwith "todo"
+let parse_json diff_json =
+  let open Ezjsonm in
+  get_list
+    (fun elem ->
+      let extract_string key = Ezjsonm.(get_string (find elem [key])) in
+      let extract_int key = Ezjsonm.(get_int (find elem [key])) in
+      let op = extract_string "op" in
+      let line_index = extract_int "line" in
+      let content = [""] in
+      if op = "del" then Delete line_index
+      else if op = "ins" then Insert (line_index, content)
+      else failwith "Error when parsing json"
+    ) diff_json
 
-let build_json diff_obj = failwith "todo"
+  (* val get_list: (value -> 'a) -> value -> 'a list *)
+  (* let extract_string name = Ezjsonm.(get_string (find json [name])) in
+  let extract_int name = Ezjsonm.(get_int (find json [name])) in
+  {
+    server_id = extract_string "server_id";
+    url = extract_string "url";
+    token = extract_string "token";
+    port = extract_int "port";
+    version = extract_int "version";
+  } *)
+
+let build_json diff_obj =
+  let open Ezjsonm in
+  let to_json_strlist str_lst =
+    list (fun str -> string str) str_lst in
+  (* list of dicts *)
+  list (fun op ->
+      match op with
+      | Delete index ->
+        dict [("op", string "del");
+              ("line", int index);
+              ("content", to_json_strlist [""])]
+      | Insert (index, str_lst) ->
+        dict [("op", string "ins");
+         ("line", int index);
+         ("content", to_json_strlist str_lst)]
+    ) diff_obj
 
 let write_json w_json filename = failwith "todo"
 

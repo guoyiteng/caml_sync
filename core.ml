@@ -19,6 +19,7 @@ exception File_not_found
 
 let calc_diff base_content new_content =
   let base_delete =
+    (* create a list of Delete's *)
     let rec add_delete from_index acc =
       if from_index = 0 then acc
       else add_delete (from_index - 1) ((Delete from_index)::acc)
@@ -26,7 +27,11 @@ let calc_diff base_content new_content =
   (Insert (0, new_content))::base_delete
 
 let update_diff base_content diff_content =
+  (* go over every element in base_content, and compare the line number with
+   * information in diff_content, in order to see whether the current line
+   * should be kept, deleted, or followed by some new lines. *)
   let rec match_command cur_index diff_lst acc =
+    (* new content willl be saved in acc, in reverse order*)
     match diff_lst with
     | [] ->
       if cur_index > List.length base_content then acc
@@ -36,8 +41,10 @@ let update_diff base_content diff_content =
       begin match h with
         | Delete ind ->
           if cur_index = ind then
+            (* move on to the next line. Do not add anything to acc *)
             match_command (cur_index+1) t acc
           else if cur_index < ind then
+            (* copy current line from base_content to acc *)
             let cur_elem = List.nth base_content (cur_index-1) in
             match_command (cur_index+1) diff_lst (cur_elem::acc)
           else failwith "should not happen in update_diff"
@@ -45,9 +52,11 @@ let update_diff base_content diff_content =
           if ind = 0 then
             match_command cur_index t (List.rev str_lst)
           else if cur_index < ind then
+            (* copy current line from base_content to acc *)
             let cur_elem = List.nth base_content (cur_index-1) in
             match_command (cur_index+1) diff_lst (cur_elem::acc)
           else if cur_index = ind then
+            (* insert lines after current line *)
             let cur_elem = List.nth base_content (cur_index-1) in
             let new_lst = List.rev (cur_elem::str_lst) in
             match_command (cur_index+1) t (new_lst @ acc)

@@ -70,7 +70,7 @@ let parse_json diff_json =
     (fun elem ->
       let extract_string key = Ezjsonm.(get_string (find elem [key])) in
       let extract_int key = Ezjsonm.(get_int (find elem [key])) in
-      let extract_strlst key = [""] in
+      let extract_strlst key = Ezjsonm.(get_strings (find elem [key])) in
       let op = extract_string "op" in
       let line_index = extract_int "line" in
       let content = extract_strlist "content" in
@@ -78,17 +78,6 @@ let parse_json diff_json =
       else if op = "ins" then Insert (line_index, content)
       else failwith "Error when parsing json"
     ) diff_json
-
-  (* val get_list: (value -> 'a) -> value -> 'a list *)
-  (* let extract_string name = Ezjsonm.(get_string (find json [name])) in
-  let extract_int name = Ezjsonm.(get_int (find json [name])) in
-  {
-    server_id = extract_string "server_id";
-    url = extract_string "url";
-    token = extract_string "token";
-    port = extract_int "port";
-    version = extract_int "version";
-  } *)
 
 let build_json diff_obj =
   let open Ezjsonm in

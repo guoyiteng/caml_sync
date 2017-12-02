@@ -72,8 +72,9 @@ let write_json w_json filename = failwith "todo"
 
 (* create a directory named [file_dir] if it currently does not exist *)
 let create_dir file_dir =
+  if file_dir = "" then () else
   try ignore (Sys.is_directory file_dir);() with
-  | Sys_error _ -> Unix.mkdir file_dir 0o666
+  | Sys_error _ -> Unix.mkdir file_dir 0o770
 
 let create_file filename content =
   if Sys.file_exists filename

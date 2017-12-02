@@ -72,4 +72,6 @@ let write_json w_json filename = failwith "todo"
 
 let create_file filename content = failwith "todo"
 
-let delete_file filename = failwith "todo"
+let delete_file filename =
+  try Sys.remove filename
+  with Sys_error _ -> raise File_not_found 

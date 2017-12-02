@@ -1,7 +1,7 @@
 runserver:
 	ocamlbuild -use-ocamlfind server.native
 	rm -f server/server.native
-	mv server.native server/server.native 
+	mv server.native server/server.native
 	./server/server.native
 server_template:
 	ocamlbuild -use-ocamlfind server_template.native && ./server_template.native

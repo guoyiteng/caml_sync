@@ -1,16 +1,11 @@
 open Core
 open Opium.Std
 
-type version = int
-
 (* ocaml representation of server config in "config.json". *)
-type config = {
-  server_id: string;
-  url: string;
-  token: string;
-  port: int;
-  version: int;
-}
+type config
+
+(* ocaml representation of all user's files *)
+type state
 
 (* [init token] creates a caml_sync server directory structure in the current
  * directory if it does not exist. It also initializes a ".config" file. *)
@@ -22,8 +17,17 @@ val init: string -> unit
  *)
 val load_config: unit -> config
 
-(* [calc_diff_by_version v_from v_to] returns the difference between version [from] and
- * version [to].
+(* [calc_files_diff_between_states state1 state2] is a file_diff list between 
+ * [state1] and [state2]. [state1] is our base state and [state2] is our new 
+ * state. *)
+val calc_files_diff_between_states: state -> state -> file_diff list
+
+(* [apply_version_diff_to_state version_diff state] the result state that
+ *  we apply all changes in [version_diff] to [state]. *)
+val apply_version_diff_to_state: version_diff -> state -> state
+
+(* [calc_diff_by_version v_from v_to] returns the difference between version 
+ * [from] and version [to].
 *)
 val calc_diff_by_version: int -> int -> version_diff
 

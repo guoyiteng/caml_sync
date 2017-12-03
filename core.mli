@@ -48,6 +48,8 @@ val build_version_diff_json : version_diff -> Ezjsonm.t
  * represented by [v_json] *)
 val parse_version_diff_json : Ezjsonm.t -> version_diff
 
+(* [read_json filename] reads the file specified by [filename] and returns
+ * the information as a json *)
 val read_json: string -> Ezjsonm.t
 
 (* [write_json filename w_json] writes the json to an output file

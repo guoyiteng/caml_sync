@@ -155,7 +155,9 @@ let create_dir filename =
   inc_dir_create lst_split ""
 
 let read_json filename =
-  let in_c = open_in filename in
+  if not (Sys.file_exists filename)
+  then raise (File_existed "Cannot file to read does not exist.")
+  else let in_c = open_in filename in
   let json = Ezjsonm.from_channel in_c in
   close_in in_c; json
 

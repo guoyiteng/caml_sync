@@ -19,7 +19,7 @@ exception File_not_found of string
 
 let calc_diff base_content new_content =
   let base_delete =
-    (* create a list of Delete's *)
+    (* create a list of Delete's corresponding to all lines in [base_content] *)
     let rec add_delete from_index acc =
       if from_index = 0 then acc
       else add_delete (from_index - 1) ((Delete from_index)::acc)
@@ -31,34 +31,35 @@ let apply_diff base_content diff_content =
    * information in diff_content, in order to see whether the current line
    * should be kept, deleted, or followed by some new lines. *)
   let rec match_op cur_index diff_lst acc =
-    (* new content willl be saved in acc, in reverse order*)
+    (* new content willl be saved in acc, in reverse order *)
     match diff_lst with
     | [] ->
       if cur_index > List.length base_content then acc
-      else let cur_elem = List.nth base_content (cur_index-1) in
-        match_op (cur_index+1) diff_lst (cur_elem::acc)
+      else let cur_line = List.nth base_content (cur_index-1) in
+        match_op (cur_index+1) diff_lst (cur_line::acc)
     | h::t ->
       begin match h with
         | Delete ind ->
           if cur_index = ind then
-            (* move on to the next line. Do not add anything to acc *)
+            (* current line is deleted.
+             * move on to the next line. Do not add anything to acc *)
             match_op (cur_index+1) t acc
           else if cur_index < ind then
             (* copy current line from base_content to acc *)
-            let cur_elem = List.nth base_content (cur_index-1) in
-            match_op (cur_index+1) diff_lst (cur_elem::acc)
+            let cur_line = List.nth base_content (cur_index-1) in
+            match_op (cur_index+1) diff_lst (cur_line::acc)
           else failwith "should not happen in update_diff"
         | Insert (ind, str_lst) ->
           if ind = 0 then
             match_op cur_index t (List.rev str_lst)
           else if cur_index < ind then
             (* copy current line from base_content to acc *)
-            let cur_elem = List.nth base_content (cur_index-1) in
-            match_op (cur_index+1) diff_lst (cur_elem::acc)
+            let cur_line = List.nth base_content (cur_index-1) in
+            match_op (cur_index+1) diff_lst (cur_line::acc)
           else if cur_index = ind then
             (* insert lines after current line *)
-            let cur_elem = List.nth base_content (cur_index-1) in
-            let new_lst = List.rev (cur_elem::str_lst) in
+            let cur_line = List.nth base_content (cur_index-1) in
+            let new_lst = List.rev (cur_line::str_lst) in
             match_op (cur_index+1) t (new_lst @ acc)
           else failwith "should not happen in update_diff"
       end
@@ -68,9 +69,11 @@ let extract_string json key = Ezjsonm.(get_string (find json [key]))
 
 let extract_int json key = Ezjsonm.(get_int (find json [key]))
 
+let extract_bool json key = Ezjsonm.(get_bool (find json [key]))
+
 let extract_strlist json key = Ezjsonm.(get_strings (find json [key]))
 
-let build_json diff_obj =
+let build_diff_json diff_obj =
   let open Ezjsonm in
   let to_json_strlist str_lst =
     list (fun str -> string str) str_lst in
@@ -87,7 +90,7 @@ let build_json diff_obj =
               ("content", to_json_strlist str_lst)]
     ) diff_obj
 
-let parse_json diff_json =
+let parse_diff_json diff_json =
   let open Ezjsonm in
   get_list
     (fun elem ->
@@ -97,10 +100,8 @@ let parse_json diff_json =
        if op = "del" then Delete line_index
        else if op = "ins" then Insert (line_index, content)
        else failwith "Error when parsing json"
-    ) (unwrap diff_json)
+    ) diff_json
 
-(* [build_version_diff_json v_diff] is a json representing the ocaml type
- * [version_diff]. *)
 let build_version_diff_json v_diff =
   let open Ezjsonm in
   dict [
@@ -110,18 +111,31 @@ let build_version_diff_json v_diff =
       fun f_diff -> dict [
           "file_name", (string f_diff.file_name);
           "is_deleted", (bool f_diff.is_deleted);
-          "content_diff", (build_json f_diff.content_diff);
+          "content_diff", (build_diff_json f_diff.content_diff);
         ]
     ) v_diff.edited_files;
   ]
 
-let parse_version_diff_json v_json =
-  failwith "todo"
+(* [parse_version_diff_json f_json] returns an ocaml file_diff object
+ * represented by [f_json] *)
+let parse_file_diff_json f_json =
+  let open Ezjsonm in
+  {
+    file_name = extract_string f_json "file_name";
+    is_deleted = extract_bool f_json "is_deleted";
+    content_diff = parse_diff_json (find f_json ["content_diff"])
+  }
 
-let write_json w_json filename = failwith "todo"
+let parse_version_diff_json v_json =
+  let open Ezjsonm in
+  {
+    prev_version = extract_int v_json "prev_version";
+    cur_version = extract_int v_json "cur_version";
+    edited_files = get_list parse_file_diff_json (find v_json ["edited_files"])
+  }
 
 (* create a directory given by information in [filename],
- * given that it currently does not exist *)
+ * if it currently does not exist *)
 let create_dir filename =
   let lst_split = String.split_on_char '/' filename in
   let rec inc_dir_create lst acc =
@@ -134,9 +148,11 @@ let create_dir filename =
       | Sys_error _ -> Unix.mkdir new_acc 0o770; inc_dir_create t new_acc in
   inc_dir_create lst_split ""
 
-let create_file filename content =
+let write_json w_json filename = failwith "todo"
+
+let write_file filename content =
   if Sys.file_exists filename
-  then raise (File_existed "Error when creating file")
+  then raise (File_existed "Cannot create file")
   else
     (* create directory if necessary. *)
     let _ = create_dir filename in

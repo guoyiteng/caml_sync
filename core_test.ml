@@ -10,8 +10,8 @@ let diff_2 = calc_diff old_2 new_2
 (* let diff_2b = [Delete 1; Delete 2; Insert(3, ["B"]); Delete 6; Insert(7, ["C"])] *)
 
 let update_diff_tests = [
-  "test_1" >:: (fun _ -> assert_equal new_1 (update_diff old_1 diff_1));
-  "test_2" >:: (fun _ -> assert_equal new_2 (update_diff old_2 diff_2));
+  "test_1" >:: (fun _ -> assert_equal new_1 (apply_diff old_1 diff_1));
+  "test_2" >:: (fun _ -> assert_equal new_2 (apply_diff old_2 diff_2));
 ]
 
 let tests =

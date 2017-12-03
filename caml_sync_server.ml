@@ -58,11 +58,16 @@ let apply_version_diff_to_state version_diff state =
 let calc_diff_by_version v_from v_to =
   raise Unimplemented
 
+(* [verify_token req config] is true if the token in request is equal to  *)
+let verify_token req config =
+  match "token" |> Uri.get_query_param (Request.uri req) with
+  | Some tk -> tk = config.token
+  | None -> false
+
 let handle_get_current_version = get "/version/:token" begin fun req ->   
-    let token = param req "token" in
     (* load config from config.json *)
     let config = load_config () in    
-    if token = config.token then
+    if verify_token req config then
       `Json (
         let open Ezjsonm in
         dict ["version", int config.version]
@@ -72,11 +77,10 @@ let handle_get_current_version = get "/version/:token" begin fun req ->
       `String ("Unauthorized Access") |> respond' ~code:`Unauthorized
   end
 
-let handle_post_diff_from_client = post "/diff/:token" begin fun
+let handle_post_diff_from_client = post "/diff" begin fun
     req ->
-    let token = param req "token" in
     let config = load_config () in
-    if token = config.token then
+    if verify_token req config then
       req |> App.json_of_body_exn |> Lwt.map 
         begin fun req_json -> 
           let req_v_diff = parse_version_diff_json req_json in
@@ -98,11 +102,10 @@ let handle_post_diff_from_client = post "/diff/:token" begin fun
       `String ("Unauthorized Access") |> respond' ~code:`Unauthorized
   end
 
-let handle_get_diff_from_client = get "/diff/:token" begin fun
+let handle_get_diff_from_client = get "/diff" begin fun
     req ->
-    let token = param req "token" in
     let config = load_config () in
-    if token = config.token then
+    if verify_token req config then
       match "from" |> Uri.get_query_param (Request.uri req) with
       | Some from_str -> begin
           let is_int s =

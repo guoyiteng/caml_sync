@@ -109,7 +109,7 @@ let build_version_diff_json v_diff =
     "edited_files", list (
       fun f_diff -> dict [
           "file_name", (string f_diff.file_name);
-          "is_directory", (bool f_diff.is_directory);
+          "is_deleted", (bool f_diff.is_deleted);
           "content_diff", (build_json f_diff.content_diff);
         ]
     ) v_diff.edited_files;

@@ -69,6 +69,8 @@ let extract_string json key = Ezjsonm.(get_string (find json [key]))
 
 let extract_int json key = Ezjsonm.(get_int (find json [key]))
 
+let extract_bool json key = Ezjsonm.(get_bool (find json [key]))
+
 let extract_strlist json key = Ezjsonm.(get_strings (find json [key]))
 
 let build_diff_json diff_obj =
@@ -98,7 +100,7 @@ let parse_diff_json diff_json =
        if op = "del" then Delete line_index
        else if op = "ins" then Insert (line_index, content)
        else failwith "Error when parsing json"
-    ) (unwrap diff_json)
+    ) diff_json
 
 let build_version_diff_json v_diff =
   let open Ezjsonm in
@@ -114,13 +116,26 @@ let build_version_diff_json v_diff =
     ) v_diff.edited_files;
   ]
 
-let parse_version_diff_json v_json =
-  failwith "todo"
+(* [parse_version_diff_json f_json] returns an ocaml file_diff object
+ * represented by [f_json] *)
+let parse_file_diff_json f_json =
+  let open Ezjsonm in
+  {
+    file_name = extract_string f_json "file_name";
+    is_deleted = extract_bool f_json "is_deleted";
+    content_diff = parse_diff_json (find f_json ["content_diff"])
+  }
 
-let write_json w_json filename = failwith "todo"
+let parse_version_diff_json v_json =
+  let open Ezjsonm in
+  {
+    prev_version = extract_int v_json "prev_version";
+    cur_version = extract_int v_json "cur_version";
+    edited_files = get_list parse_file_diff_json (find v_json ["edited_files"])
+  }
 
 (* create a directory given by information in [filename],
- * given that it currently does not exist *)
+ * if it currently does not exist *)
 let create_dir filename =
   let lst_split = String.split_on_char '/' filename in
   let rec inc_dir_create lst acc =
@@ -133,9 +148,11 @@ let create_dir filename =
       | Sys_error _ -> Unix.mkdir new_acc 0o770; inc_dir_create t new_acc in
   inc_dir_create lst_split ""
 
-let create_file filename content =
+let write_json w_json filename = failwith "todo"
+
+let write_file filename content =
   if Sys.file_exists filename
-  then raise (File_existed "Error when creating file")
+  then raise (File_existed "Cannot create file")
   else
     (* create directory if necessary. *)
     let _ = create_dir filename in

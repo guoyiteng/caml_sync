@@ -50,7 +50,7 @@ val parse_version_diff_json : Ezjsonm.t -> version_diff
 
 (* [read_json filename] reads the file specified by [filename] and returns
  * the information as a json *)
-val read_json: string -> Ezjsonm.t
+val read_json: string -> [> Ezjsonm.t]
 
 (* [write_json filename w_json] writes the json to an output file
  * specified by [filename] *)

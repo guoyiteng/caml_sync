@@ -151,11 +151,13 @@ let create_dir filename =
       | Sys_error _ -> Unix.mkdir new_acc 0o770; inc_dir_create t new_acc in
   inc_dir_create lst_split ""
 
-let write_json w_json filename = failwith "todo"
+let write_json w_json filename =
+  create_dir filename;
+  w_json |> Ezjsonm.to_channel (open_out filename)
 
 let write_file filename content =
   if Sys.file_exists filename
-  then raise (File_existed "Cannot create file")
+  then raise (File_existed "Cannot create file.")
   else
     (* create directory if necessary. *)
     let _ = create_dir filename in
@@ -167,4 +169,4 @@ let write_file filename content =
 
 let delete_file filename =
   try Sys.remove filename
-  with Sys_error _ -> raise (File_not_found "Cannot remove file")
+  with Sys_error _ -> raise (File_not_found "Cannot remove file.")

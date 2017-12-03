@@ -64,10 +64,10 @@ val write_json : [> Ezjsonm.t ] -> string -> unit
  * [filename] may include any sub-directory.
  * [content] is a list of lines representing the content
  * to be written to the new file.
- * raises: [File_existed "Cannot create file"] if there already exists
+ * raises: [File_existed "Cannot create file."] if there already exists
 * a file with the same name as [filename] *)
 val write_file : string -> string list -> unit
 
 (* [delete_file filename] deletes a file named [filename].
- * raises: [File_not_found "Cannot remove file"] if [filename] cannot be found *)
+ * raises: [File_not_found "Cannot remove file."] if [filename] cannot be found *)
 val delete_file : string -> unit

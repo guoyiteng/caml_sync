@@ -154,9 +154,16 @@ let create_dir filename =
       | Sys_error _ -> Unix.mkdir new_acc 0o770; inc_dir_create t new_acc in
   inc_dir_create lst_split ""
 
-let write_json w_json filename =
+let read_json filename =
+  let in_c = open_in filename in
+  let json = Ezjsonm.from_channel in_c in
+  close_in in_c; json
+
+let write_json filename w_json =
   create_dir filename;
-  w_json |> Ezjsonm.to_channel (open_out filename)
+  let out_c = open_out filename in
+  w_json |> Ezjsonm.to_channel out_c;
+  close_out out_c
 
 let write_file filename content =
   if Sys.file_exists filename

@@ -3,7 +3,7 @@ type diff
 
 type file_diff = {
   file_name: string;
-  is_directory: bool;
+  is_deleted: bool;
   content_diff: diff;
 }
 
@@ -20,17 +20,27 @@ exception File_not_found of string
  * [base_content] and [new_content] *)
 val calc_diff : string list -> string list -> diff
 
-(* [update_diff base_content diff_content] returns the result after applying the changes in
+(* [apply_diff base_content diff_content] returns the result after applying the changes in
  * [diff_content] to [base_content] *)
-val update_diff : string list -> diff -> string list
+val apply_diff : string list -> diff -> string list
 
-(* [parse_json diff_json] returns an ocaml diff object
- * represented by the diff json *)
-val parse_json : [> Ezjsonm.t ] -> diff
+val extract_string : Ezjsonm.value -> string -> string
+
+val extract_int : Ezjsonm.value -> string -> int
+
+val extract_strlist : Ezjsonm.value -> string -> string list
 
 (* [build_json diff_obj] returns the diff json containing all the information
  * in the ocaml diff object [diff] *)
 val build_json : diff -> [> Ezjsonm.t ]
+
+(* [parse_json diff_json] returns an ocaml diff object
+ * represented by the diff json *)
+val parse_json : Ezjsonm.t -> diff
+
+val build_version_diff_json : version_diff -> [> Ezjsonm.t ]
+
+val parse_version_diff_json : [> Ezjsonm.t ] -> version_diff
 
 (* [write_json w_json filename] writes the json to an output file specified by [filename] *)
 val write_json : [> Ezjsonm.t ] -> string -> unit

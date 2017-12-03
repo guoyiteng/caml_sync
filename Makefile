@@ -16,7 +16,7 @@ debug:
 cleanup:
 	ocamlbuild -clean
 install:
-	opam install opium
+	opam install opium ezjsonm
 test:
 	ocamlbuild -use-ocamlfind core_test.byte
 	./core_test.byte

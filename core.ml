@@ -65,12 +65,20 @@ let apply_diff base_content diff_content =
       end
   in List.rev (match_op 1 diff_content [])
 
+(* [extract_string json key] gets the key-value pair in [json] keyed on [key],
+  * and returns the corresponding string value *)
 let extract_string json key = Ezjsonm.(get_string (find json [key]))
 
+(* [extract_int json key] gets the key-value pair in [json] keyed on [key],
+  * and returns the corresponding int value *)
 let extract_int json key = Ezjsonm.(get_int (find json [key]))
 
+(* [extract_bool json key] gets the key-value pair in [json] keyed on [key],
+  * and returns the corresponding bool value *)
 let extract_bool json key = Ezjsonm.(get_bool (find json [key]))
 
+(* [extract_strlist json key] gets the key-value pair in [json] keyed on [key],
+  * and returns the corresponding string list value *)
 let extract_strlist json key = Ezjsonm.(get_strings (find json [key]))
 
 let build_diff_json diff_obj =

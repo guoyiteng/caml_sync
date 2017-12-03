@@ -24,22 +24,6 @@ val calc_diff : string list -> string list -> diff
  * after applying the changes in [diff_content] to [base_content] *)
 val apply_diff : string list -> diff -> string list
 
-(* [extract_string json key] gets the key-value pair in [json] keyed on [key],
-  * and returns the corresponding string value *)
-val extract_string : Ezjsonm.value -> string -> string
-
-(* [extract_int json key] gets the key-value pair in [json] keyed on [key],
-  * and returns the corresponding int value *)
-val extract_int : Ezjsonm.value -> string -> int
-
-(* [extract_bool json key] gets the key-value pair in [json] keyed on [key],
-  * and returns the corresponding bool value *)
-val extract_bool : Ezjsonm.value -> string -> bool
-
-(* [extract_strlist json key] gets the key-value pair in [json] keyed on [key],
-  * and returns the corresponding string list value *)
-val extract_strlist : Ezjsonm.value -> string -> string list
-
 (* [build_diff_json diff_obj] returns the diff json representing
  * the ocaml diff object [diff_obj] *)
 val build_diff_json : diff -> [> Ezjsonm.t ]

@@ -26,10 +26,10 @@ let load_config () =
     | _ -> failwith("Unexpected Error")
   with
   | Sys_error e ->
-    print_endline "Cannot find .config. Directory seems have not
-      been initialized into a cmal_sync directory";
-    print_endline e
-  | _ -> print_endline "Unexpected internal error"
+    print_endline e;
+    failwith("Cannot find .config. Directory seems have not
+      been initialized into a cmal_sync directory")
+  | _ -> failwith("Unexpected internal error")
 
 
 let update_config config =
@@ -80,31 +80,36 @@ let backup_working_files () =
 let init url token =
   (* TODO: should not insert token directly *)
   (* Makes a dummy call to check if the url is a caml_sync server *)
-  Client.get (Uri.of_string url^"/version/"^token) >>= fun (resp, body) ->
+  Client.get (Uri.of_string (url^"/version/"^token)) >>= fun (resp, body) ->
   let code = resp |> Response.status |> Code.code_of_status in
   (* First checks if pass token test by the response status code *)
-  if code = 401 then print_endline "Token entered is incorrect" else
-  body |> Cohttp_lwt.Body.to_string >|= fun body ->
-  let open Ezjsonm in
-  match (from_string body) with
-  (* Only allowed json body format; version keyword must appears first *)
-  | `O [("version", v )::_] ->
-    if Sys.file_exists ".config" then
-      raise (File_existed "[.config] already exsits; it seems like the current directory
-        has already been initialized into a caml_sync client directory")
-    else
-      let config = {
-        client_id = "TODO";
-        url = url;
-        token = token;
-        version = 0
-      } in
-      update_config config;
-      sync ()
-  | _ -> print_endline "The address you entered does not seem to be a valid caml_sync address"
+  if code = 401 then
+    `Empty |> Cohttp_lwt.Body.to_string >|= fun _ -> print_endline "Token entered is incorrect"
+  else
+    (* body |> Cohttp_lwt.Body.to_string >|= fun body -> *)
+    let open Ezjsonm in
+    body |> Cohttp_lwt.Body.to_string >|= fun body ->
+    match (from_string body) with
+    (* Only allowed json body format; version keyword must appears first *)
+    | `O (("version", v )::_) ->
+      if Sys.file_exists ".config" then
+        raise (File_existed "[.config] already exsits; it seems like the current directory
+          has already been initialized into a caml_sync client directory")
+      else
+        let config = {
+          client_id = "TODO";
+          url = url;
+          token = token;
+          version = 0
+        } in
+        update_config config;
+        (* Lwt_main.run (sync ()) *)
+    | _ -> print_endline "The address you entered does not seem to be a valid caml_sync address"
 
-let sync () =
-  failwith("unimplemented")
+let sync =
+  Client.get (Uri.of_string ("www.google.com")) >>= fun (resp, body) ->
+  body |> Cohttp_lwt.Body.to_string >|= fun body ->
+  print_endline "hey boi"
 
 (* usage:
  *  caml_sync init <url> <token> ->
@@ -113,10 +118,10 @@ let sync () =
  *    syncs files in local directories with files in server
 *)
 let () =
-  if Array.length Sys.argv = 0 then
-    sync ()
+  if Array.length Sys.argv = 1 then
+    Lwt_main.run sync
   else
-    if (Array.length Sys.argv) = 3 && (Array.get Sys.argv 0) = "init" then
+    if (Array.length Sys.argv) = 2 && (Array.get Sys.argv 1) = "init" then
       let () = print_endline "You are initializing the current directory as a
         caml_sync directory; Please indicate the address of the server you are
         linking to:\n" in
@@ -128,7 +133,7 @@ let () =
         | token -> let () = print_endline
                        ("Please enter the password for the server at "
                         ^ url ^ " to connect to the server:\n") in
-          init url token
+          Lwt_main.run (init url token)
     else
       print_endline "usage:\n
         caml_sync init <url> <token> ->\n

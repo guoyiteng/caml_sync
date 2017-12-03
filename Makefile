@@ -7,7 +7,7 @@ server_template:
 runclient:
 	ocamlbuild -use-ocamlfind caml_rsync_client.native
 	rm -f client/caml_rsync_client.native
-	mv client.native client/caml_rsync_client.native
+	mv caml_rsync_client.native client/caml_rsync_client.native
 	./client/caml_rsync_client.native
 check:
 	bash checktypes.sh

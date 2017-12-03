@@ -60,8 +60,8 @@ val backup_working_files : unit -> unit
 (* [init url token] creates a hidden ".config" file and stores [url] and [token]
  * in ".config". It also creates a folder ".caml_sync/" in the current directory.
  * Users can change this [url] and [token] manually in ".config". *)
-val init : string -> string -> unit
+val init : string -> string -> unit Lwt.t
 
 (* Performs all the sync stuff
  *)
-val sync : unit -> unit
+val sync : unit Lwt.t

@@ -120,7 +120,7 @@ let build_version_diff_json v_diff =
  * represented by [f_json] *)
 let parse_file_diff_json f_json =
   let open Ezjsonm in
-  let f_json' = unwrap f_json in  
+  let f_json' = unwrap f_json in
   {
     file_name = extract_string f_json' "file_name";
     is_deleted = extract_bool f_json' "is_deleted";
@@ -133,7 +133,8 @@ let parse_version_diff_json v_json =
   {
     prev_version = extract_int v_json' "prev_version";
     cur_version = extract_int v_json' "cur_version";
-    edited_files = get_list (fun ele -> wrap ele |> parse_file_diff_json) (find v_json' ["edited_files"])
+    edited_files =
+      get_list (fun elem -> wrap elem |> parse_file_diff_json) (find v_json' ["edited_files"])
   }
 
 (* create a directory given by information in [filename],

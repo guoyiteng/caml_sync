@@ -1,33 +1,34 @@
 open Core
 open Opium.Std
 
-(* ocaml representation of server config in "config.json". *)
+(* Ocaml representation of server config information in "config.json". *)
 type config
 
-(* ocaml representation of all user's files *)
+(* Ocaml representation of all of the user's files *)
 type state
 
 (* [init token] creates a caml_sync server directory structure in the current
  * directory if it does not exist. It also initializes a ".config" file. *)
 val init: string -> unit
 
-(* [load_config _] loads the configuration of server if there's already a 
+(* [load_config _] loads the configuration of server if there's already a
  * configuration created for the server.
  * requires: ".config" must exist in the current directory.
  *)
 val load_config: unit -> config
 
-(* [calc_files_diff_between_states state1 state2] is a file_diff list between 
- * [state1] and [state2]. [state1] is our base state and [state2] is our new 
+(* [calc_file_diffs_between_states state1 state2] returns a file_diff list between
+ * [state1] and [state2]. [state1] is the base state and [state2] is the new
  * state. *)
-val calc_files_diff_between_states: state -> state -> file_diff list
+val calc_file_diffs_between_states: state -> state -> file_diff list
 
-(* [apply_version_diff_to_state version_diff state] the result state that
+(* [apply_version_diff_to_state version_diff state] returns the result state after
  *  we apply all changes in [version_diff] to [state]. *)
 val apply_version_diff_to_state: version_diff -> state -> state
 
-(* [calc_diff_by_version v_from v_to] returns the difference between version 
- * [from] and version [to].
+(* [calc_diff_by_version v_from v_to] returns the difference between version
+ * [v_from] and version [v_to]
+ * requires: [v_from] < [v_to].
 *)
 val calc_diff_by_version: int -> int -> version_diff
 
@@ -35,11 +36,11 @@ val calc_diff_by_version: int -> int -> version_diff
  * returns: a json containing [cur_version] to the client. *)
 val handle_get_current_version: App.builder
 
-(* Handle POST request at "/diff". 
- * accepts: the diff json representing the difference between the current client version 
- * and the latest server version
- * effects: updates [cur_version] to [cur_version + 1], and creates a new directory in the server 
- * to store this new diff
+(* Handle POST request at "/diff".
+ * accepts: the diff json representing the difference between the client's
+ * current version and the latest server version
+ * effects: updates [cur_version] to [cur_version + 1],
+ * and creates a new file in the server to store this new diff
  * returns: a json containing the [cur_version] to the client. *)
 val handle_post_diff_from_client: App.builder
 

@@ -14,7 +14,8 @@ type config = {
   version: int;
 }
 
-(* [(filename, [line1; line2; line3]); ...] *)
+(* keyed on filename, value is content of the file
+ * [(filename, [line1; line2; line3]); ...] *)
 type state = (string * string list) list
 
 let default_config = {
@@ -32,12 +33,12 @@ let write_config c =
         "url", (string c.url);
         "token", (string c.token);
         "port", (int c.port);
-        "version", (int c.version)] 
+        "version", (int c.version)]
   |> Ezjsonm.to_channel (open_out "config.json")
 
 let init token =
   write_config {default_config with token = token};
-  { 
+  {
     prev_version = 0;
     cur_version = 0;
     edited_files = []
@@ -54,17 +55,18 @@ let load_config () =
     version = extract_int json "version";
   }
 
-let calc_files_diff_between_states state1 state2 =
+let calc_file_diffs_between_states state1 state2 =
   raise Unimplemented
 
 let apply_version_diff_to_state version_diff state =
   raise Unimplemented
 
 let calc_diff_by_version v_from v_to =
-  assert (v_from <= v_to);
+  assert (v_from < v_to);
   let init_state = [] in
   let rec update_to_version state cur_ver ver = begin
-    let v_json = Ezjsonm.from_channel (open_in ("version" ^ string_of_int cur_ver ^ ".diff")) in
+    let v_json = Ezjsonm.from_channel
+        (open_in ("version_" ^ string_of_int cur_ver ^ ".diff")) in
     let v_diff = parse_version_diff_json v_json in
     let new_state = apply_version_diff_to_state v_diff state in
     if cur_ver = ver then
@@ -74,24 +76,25 @@ let calc_diff_by_version v_from v_to =
   end in
   let s_from = update_to_version init_state 0 v_from in
   let s_to = update_to_version s_from (v_from + 1) v_to in
-  calc_files_diff_between_states s_from s_to
+  calc_file_diffs_between_states s_from s_to
 
-(* [verify_token req config] is true if the token in request is equal to  *)
+(* [verify_token req config] returns true if the token in request
+ * is equal to the valid token *)
 let verify_token req config =
   match "token" |> Uri.get_query_param (Request.uri req) with
   | Some tk -> tk = config.token
   | None -> false
 
-let handle_get_current_version = get "/version" begin fun req ->   
+let handle_get_current_version = get "/version" begin fun req ->
     (* load config from config.json *)
-    let config = load_config () in    
+    let config = load_config () in
     if verify_token req config then
       `Json (
         let open Ezjsonm in
         dict ["version", int config.version]
       ) |> respond'
     else
-      (* Token is incorrect. *)
+      (* Token is invalid. *)
       `String ("Unauthorized Access") |> respond' ~code:`Unauthorized
   end
 
@@ -99,13 +102,13 @@ let handle_post_diff_from_client = post "/diff" begin fun
     req ->
     let config = load_config () in
     if verify_token req config then
-      req |> App.json_of_body_exn |> Lwt.map 
-        begin fun req_json -> 
+      req |> App.json_of_body_exn |> Lwt.map
+        begin fun req_json ->
           let req_v_diff = parse_version_diff_json req_json in
           let new_version = config.version + 1 in
           let new_config = {config with version = new_version} in
           let save_json = {
-            req_v_diff with 
+            req_v_diff with
             prev_version = config.version;
             cur_version = new_version
           } |> build_version_diff_json in
@@ -137,7 +140,7 @@ let handle_get_diff_from_client = get "/diff" begin fun
                 prev_version = from;
                 cur_version = config.version;
                 edited_files = calc_diff_by_version from config.version
-              } in 
+              } in
               let json = build_version_diff_json v_diff in
               `Json (
                 json
@@ -164,7 +167,7 @@ let main () =
       |> handle_get_diff_from_client
       |> App.run_command
     with
-    | Sys_error msg -> 
+    | Sys_error msg ->
       print_endline "Cannot find config.json.";
       print_endline msg
     | _ -> raise Server_Error

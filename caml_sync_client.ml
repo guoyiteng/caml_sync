@@ -27,8 +27,8 @@ let load_config () =
   with
   | Sys_error e ->
     print_endline e;
-    failwith("Cannot find .config. Directory seems have not
-      been initialized into a cmal_sync directory")
+    failwith("Cannot find .config. It seems the directory hass not
+      been initialized to a caml_sync directory.")
   | _ -> failwith("Unexpected internal error")
 
 
@@ -45,8 +45,8 @@ let update_config config =
     to_channel (open_out ".config") json
   with
   | Sys_error e ->
-    print_endline "Cannot find .config. Directory seems have not
-      been initialized into a cmal_sync directory";
+    print_endline "Cannot find .config. It seems the directory hass not
+      been initialized to a caml_sync directory.";
     print_endline e
   | _ -> print_endline "Unexpected internal error"
 
@@ -124,7 +124,7 @@ let () =
     if (Array.length Sys.argv) = 2 && (Array.get Sys.argv 1) = "init" then
       print_endline "\nYou are initializing current directory as a caml_sync\
                      directory; Please indicate the address of the server you are\
-                     linking to:\n";
+                     connecting to:\n";
         match read_line () with
         | exception End_of_file -> ()
         | url ->

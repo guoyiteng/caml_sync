@@ -70,6 +70,32 @@ let get_latest_version config =
 let get_update_diff config =
   failwith("unimplemented")
 
+(* [search_dir dir_handle acc dir_name] recursively searches for all the files
+ * in the directory represented by [dir_handle] or its subdirectories,
+ * and returns a list of all such files of approved suffixes
+ * requires: [dir_handle] is a valid directory handle returned by Unix.opendir. *)
+let rec search_dir dir_handle acc dir_name =
+  match Unix.readdir dir_handle with
+  | exception End_of_file ->
+    let () = Unix.closedir dir_handle in acc
+  | s_name ->
+    if Sys.is_directory s_name then
+      let sub_d_path = dir_name ^ Filename.dir_sep ^ s_name in
+      let sub_d_handle = Unix.opendir sub_d_path in
+      let sub_acc = search_dir sub_d_handle acc sub_d_path in
+       search_dir dir_handle (sub_acc @ acc) dir_name
+    else if Filename.check_suffix s_name ".txt" then
+      let file_path = dir_name ^ Filename.dir_sep ^ s_name in
+      search_dir dir_handle (file_path::acc) dir_name
+    else search_dir dir_handle acc dir_name
+
+(* [get_all_filenames dir] returns a list of all the files in directory [dir] or
+ * its subdirectories that are of approved suffixes *)
+let get_all_filenames dir =
+  let d_handle =
+    try Unix.opendir dir  with | _ -> raise Not_found
+     in search_dir d_handle [] dir
+
 let post_local_diff config version_diff =
   failwith("unimplemented")
 

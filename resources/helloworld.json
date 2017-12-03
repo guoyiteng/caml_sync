@@ -1,0 +1,20 @@
+{
+	  "prev_version": 0,
+	  "cur_version": 0,
+	  "edited_files": [
+	  	{
+	  		"file_name": "1.txt",
+	  		"is_deleted": false,
+	  		"content_diff": [
+	  			{
+	  				"op": "ins",
+	  				"line": 0,
+	  				"content": [
+	  					"hello",
+	  					"world"
+	  				]
+	  			}
+	  		]
+	  	}
+  	]
+}

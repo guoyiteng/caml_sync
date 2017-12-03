@@ -48,9 +48,13 @@ val build_version_diff_json : version_diff -> Ezjsonm.t
  * represented by [v_json] *)
 val parse_version_diff_json : Ezjsonm.t -> version_diff
 
-(* [write_json w_json filename] writes the json to an output file
+(* [read_json filename] reads the file specified by [filename] and returns
+ * the information as a json *)
+val read_json: string -> [> Ezjsonm.t]
+
+(* [write_json filename w_json] writes the json to an output file
  * specified by [filename] *)
-val write_json : Ezjsonm.t -> string -> unit
+val write_json : string -> Ezjsonm.t -> unit
 
 (* [write_file filename content] creates a new file named [filename].
  * [filename] may include any sub-directory.

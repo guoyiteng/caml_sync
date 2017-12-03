@@ -36,7 +36,7 @@ let write_config c =
         "token", (string c.token);
         "port", (int c.port);
         "version", (int c.version)]
-  |> Ezjsonm.to_channel (open_out "config.json")
+  |> write_json "config.json"
 
 let init token =
   write_config {default_config with token = token};
@@ -44,11 +44,10 @@ let init token =
     prev_version = 0;
     cur_version = 0;
     edited_files = []
-  } |> build_version_diff_json |> Ezjsonm.to_channel (open_out "version_0.diff")
+  } |> build_version_diff_json |> write_json "version_0.diff"
 
 let load_config () =
-  let open Ezjsonm in
-  let json = Ezjsonm.from_channel (open_in "config.json") in
+  let json = read_json "config.json" in
   {
     server_id = extract_string json "server_id";
     url = extract_string json "url";
@@ -77,17 +76,17 @@ let calc_file_diffs_between_states state1 state2 =
             is_deleted = false;
             content_diff = content_diff
           }::acc
-      ) state1 [] in
+    ) state1 [] in
   (* add all files that appear in state2 but not in state1 *)
   let diff_lst_1 =
     fold (
       fun cur_file cur_content acc ->
         if not(mem cur_file state1) then
-        {
-          file_name = cur_file;
-          is_deleted = false;
-          content_diff = calc_diff [] cur_content
-        }::acc
+          {
+            file_name = cur_file;
+            is_deleted = false;
+            content_diff = calc_diff [] cur_content
+          }::acc
         else acc
     ) state2 [] in
   diff_lst_1 @ diff_lst_0
@@ -120,21 +119,19 @@ let calc_diff_by_version v_from v_to =
   assert (v_from <= v_to);
   if v_from = v_to then []
   else let init_state = StrMap.empty in
-  let rec update_to_version state cur_ver ver = begin
-    let v_json = Ezjsonm.from_channel
-        (open_in ("version_" ^ string_of_int cur_ver ^ ".diff")) in
-    let v_diff = parse_version_diff_json v_json in
-    assert (v_diff.prev_version = cur_ver - 1);
-    assert (v_diff.cur_version = cur_ver);
-    let new_state = apply_version_diff_to_state v_diff state in
-    if cur_ver = ver then
-      new_state
-    else
-      update_to_version new_state (cur_ver + 1) ver
-  end in
-  let s_from = update_to_version init_state 0 v_from in
-  let s_to = update_to_version s_from (v_from + 1) v_to in
-  calc_file_diffs_between_states s_from s_to
+    let rec update_to_version state cur_ver ver = begin
+      let v_json = read_json ("version_" ^ string_of_int cur_ver ^ ".diff") in
+      let v_diff = parse_version_diff_json v_json in
+      assert (v_diff.cur_version = cur_ver);
+      let new_state = apply_version_diff_to_state v_diff state in
+      if cur_ver = ver then
+        new_state
+      else
+        update_to_version new_state (cur_ver + 1) ver
+    end in
+    let s_from = update_to_version init_state 0 v_from in
+    let s_to = update_to_version s_from (v_from + 1) v_to in
+    calc_file_diffs_between_states s_from s_to
 
 (* [verify_token req config] returns true if the token in request
  * is equal to the valid token *)
@@ -170,7 +167,7 @@ let handle_post_diff_from_client = post "/diff" begin fun
             prev_version = config.version;
             cur_version = new_version
           } |> build_version_diff_json in
-          Ezjsonm.to_channel (open_out ("version_" ^ (string_of_int new_version) ^ ".diff")) save_json;
+          write_json ("version_" ^ (string_of_int new_version) ^ ".diff") save_json;
           write_config new_config;
           `Json (
             let open Ezjsonm in
@@ -218,6 +215,9 @@ let main () =
   then
     try
       let config = load_config () in
+      print_endline ("Server's name: " ^ config.server_id);
+      print_endline ("Server opens at " ^ config.url ^ ":" ^ (string_of_int config.port));
+      print_endline ("Token: " ^ config.token);
       App.empty
       |> App.port config.port
       |> handle_get_current_version

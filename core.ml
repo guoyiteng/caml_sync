@@ -132,12 +132,12 @@ let parse_file_diff_json f_json =
 
 let parse_version_diff_json v_json =
   let open Ezjsonm in
-  let v_json' = unwrap v_json in
+  let v_json' = value v_json in
   {
     prev_version = extract_int v_json' "prev_version";
     cur_version = extract_int v_json' "cur_version";
     edited_files =
-      get_list (fun elem -> wrap elem |> parse_file_diff_json) (find v_json' ["edited_files"])
+      get_list parse_file_diff_json (find v_json' ["edited_files"])
   }
 
 (* create a directory given by information in [filename],
@@ -154,9 +154,18 @@ let create_dir filename =
       | Sys_error _ -> Unix.mkdir new_acc 0o770; inc_dir_create t new_acc in
   inc_dir_create lst_split ""
 
-let write_json w_json filename =
+let read_json filename =
+  if not (Sys.file_exists filename)
+  then raise (File_existed "Cannot file to read does not exist.")
+  else let in_c = open_in filename in
+  let json = Ezjsonm.from_channel in_c in
+  close_in in_c; json
+
+let write_json filename w_json =
   create_dir filename;
-  w_json |> Ezjsonm.to_channel (open_out filename)
+  let out_c = open_out filename in
+  w_json |> Ezjsonm.to_channel out_c;
+  close_out out_c
 
 let write_file filename content =
   if Sys.file_exists filename

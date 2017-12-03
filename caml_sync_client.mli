@@ -15,7 +15,7 @@ val update_config : config -> unit
 
 (* [get_latest_version config] sends a query to the server and returns
  * the server's current version number *)
-val get_latest_version : config -> int
+val get_latest_version : config -> int option
 
 (* [get_update_diff config]
  * retrieves the current version of the working directory from [config],

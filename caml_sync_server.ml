@@ -18,7 +18,7 @@ module StrMap = Map.Make(String)
 
 (* keyed on filename, value is content of the file
  * [(filename, [line1; line2; line3]); ...] *)
-type state = StrMap
+type state = string list StrMap.t
 
 let default_config = {
   server_id = "default";

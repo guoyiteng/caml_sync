@@ -65,12 +65,8 @@ let apply_diff base_content diff_content =
       end
   in List.rev (match_op 1 diff_content [])
 
-(* [extract_string json key] gets the key-value pair in [json] keyed on [key],
-  * and returns the corresponding string value *)
 let extract_string json key = Ezjsonm.(get_string (find json [key]))
 
-(* [extract_int json key] gets the key-value pair in [json] keyed on [key],
-  * and returns the corresponding int value *)
 let extract_int json key = Ezjsonm.(get_int (find json [key]))
 
 (* [extract_bool json key] gets the key-value pair in [json] keyed on [key],
@@ -108,7 +104,7 @@ let parse_diff_json diff_json =
        if op = "del" then Delete line_index
        else if op = "ins" then Insert (line_index, content)
        else failwith "Error when parsing json"
-    ) (unwrap diff_json)
+    ) diff_json
 
 let build_version_diff_json v_diff =
   let open Ezjsonm in
@@ -128,11 +124,10 @@ let build_version_diff_json v_diff =
  * represented by [f_json] *)
 let parse_file_diff_json f_json =
   let open Ezjsonm in
-  let f_json' = unwrap f_json in
   {
-    file_name = extract_string f_json' "file_name";
-    is_deleted = extract_bool f_json' "is_deleted";
-    content_diff = parse_diff_json (wrap (find f_json' ["content_diff"]))
+    file_name = extract_string f_json "file_name";
+    is_deleted = extract_bool f_json "is_deleted";
+    content_diff = parse_diff_json (find f_json ["content_diff"])
   }
 
 let parse_version_diff_json v_json =

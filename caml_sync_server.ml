@@ -58,7 +58,39 @@ let load_config () =
   }
 
 let calc_file_diffs_between_states state1 state2 =
-  raise Unimplemented
+  let open StrMap in
+  (* iterate over all files in state1 and compare with state2 *)
+  let diff_lst_0 =
+    fold (
+      fun cur_file cur_content acc ->
+        if not(mem cur_file state2) then
+          {
+            file_name = cur_file;
+            is_deleted = true;
+            content_diff = empty_diff
+          }::acc
+        else
+          let new_content = find cur_file state2 in
+          let content_diff = calc_diff cur_content new_content in
+          {
+            file_name = cur_file;
+            is_deleted = false;
+            content_diff = content_diff
+          }::acc
+      ) state1 [] in
+  (* add all files that appear in state2 but not in state1 *)
+  let diff_lst_1 =
+    fold (
+      fun cur_file cur_content acc ->
+        if not(mem cur_file state1) then
+        {
+          file_name = cur_file;
+          is_deleted = false;
+          content_diff = calc_diff [] cur_content
+        }::acc
+        else acc
+    ) state2 [] in
+  diff_lst_1 @ diff_lst_0
 
 let apply_version_diff_to_state version_diff state =
   let open StrMap in

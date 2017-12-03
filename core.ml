@@ -2,8 +2,6 @@ type op = Delete of int | Insert of (int * string list)
 
 type diff = op list
 
-let empty_diff = []
-
 type file_diff = {
   file_name: string;
   is_deleted: bool;

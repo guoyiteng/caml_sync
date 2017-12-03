@@ -1,8 +1,6 @@
 (* [diff] represents an ocaml diff object between contents *)
 type diff
 
-val empty_diff : diff
-
 type file_diff = {
   file_name: string;
   is_deleted: bool;

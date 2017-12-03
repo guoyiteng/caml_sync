@@ -67,7 +67,7 @@ let calc_file_diffs_between_states state1 state2 =
           {
             file_name = cur_file;
             is_deleted = true;
-            content_diff = empty_diff
+            content_diff = calc_diff [] []
           }::acc
         else
           let new_content = find cur_file state2 in

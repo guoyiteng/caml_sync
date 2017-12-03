@@ -46,7 +46,7 @@ val build_diff_json : diff -> [> Ezjsonm.t ]
 
 (* [parse_diff_json diff_json] returns an ocaml diff object
  * represented by [diff_json] *)
-val parse_diff_json : Ezjsonm.value -> diff
+val parse_diff_json : Ezjsonm.t -> diff
 
 (* [build_version_diff_json v_diff] returns a json representing
  * the ocaml version_diff object [version_diff] *)
@@ -54,7 +54,7 @@ val build_version_diff_json : version_diff -> [> Ezjsonm.t ]
 
 (* [parse_version_diff_json v_json] returns an ocaml version_diff object
  * represented by [v_json] *)
-val parse_version_diff_json : [> Ezjsonm.t ] -> version_diff
+val parse_version_diff_json : Ezjsonm.t -> version_diff
 
 (* [write_json w_json filename] writes the json to an output file
  * specified by [filename] *)

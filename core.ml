@@ -100,7 +100,7 @@ let parse_diff_json diff_json =
        if op = "del" then Delete line_index
        else if op = "ins" then Insert (line_index, content)
        else failwith "Error when parsing json"
-    ) diff_json
+    ) (unwrap diff_json)
 
 let build_version_diff_json v_diff =
   let open Ezjsonm in
@@ -120,18 +120,20 @@ let build_version_diff_json v_diff =
  * represented by [f_json] *)
 let parse_file_diff_json f_json =
   let open Ezjsonm in
+  let f_json' = unwrap f_json in  
   {
-    file_name = extract_string f_json "file_name";
-    is_deleted = extract_bool f_json "is_deleted";
-    content_diff = parse_diff_json (find f_json ["content_diff"])
+    file_name = extract_string f_json' "file_name";
+    is_deleted = extract_bool f_json' "is_deleted";
+    content_diff = parse_diff_json (wrap (find f_json' ["content_diff"]))
   }
 
 let parse_version_diff_json v_json =
   let open Ezjsonm in
+  let v_json' = unwrap v_json in
   {
-    prev_version = extract_int v_json "prev_version";
-    cur_version = extract_int v_json "cur_version";
-    edited_files = get_list parse_file_diff_json (find v_json ["edited_files"])
+    prev_version = extract_int v_json' "prev_version";
+    cur_version = extract_int v_json' "cur_version";
+    edited_files = get_list (fun ele -> wrap ele |> parse_file_diff_json) (find v_json' ["edited_files"])
   }
 
 (* create a directory given by information in [filename],

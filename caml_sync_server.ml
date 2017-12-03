@@ -25,15 +25,18 @@ let default_config = {
   version = 0;
 }
 
+let write_config c =
+  let open Ezjsonm in
+  dict ["server_id", (string c.server_id);
+        "url", (string c.url);
+        "token", (string c.token);
+        "port", (int c.port);
+        "version", (int c.version)] 
+  |> Ezjsonm.to_channel (open_out "config.json")
 
 let init token =
-  let open Ezjsonm in
-  dict ["server_id", (string default_config.server_id);
-        "url", (string default_config.url);
-        "token", (string token);
-        "port", (int default_config.port);
-        "version", (int default_config.version)] 
-  |> Ezjsonm.to_channel (open_out "config.json")
+  write_config {default_config with token = token}
+
 
 let load_config () =
   let open Ezjsonm in
@@ -74,9 +77,23 @@ let handle_post_diff_from_client = post "/diff/:token" begin fun
     let token = param req "token" in
     let config = load_config () in
     if token = config.token then
-      req |> App.json_of_body_exn |> Lwt.map (fun req_json -> 
-          raise Unimplemented
-        )
+      req |> App.json_of_body_exn |> Lwt.map 
+        begin fun req_json -> 
+          let req_v_diff = parse_version_diff_json req_json in
+          let new_version = config.version + 1 in
+          let new_config = {config with version = new_version} in
+          let save_json = {
+            req_v_diff with 
+            prev_version = config.version; 
+            cur_version = new_version
+          } |> build_version_diff_json in
+          Ezjsonm.to_channel (open_out ("version_" ^ (string_of_int new_version) ^ ".diff")) save_json;
+          write_config new_config;
+          `Json (
+            let open Ezjsonm in
+            dict ["version", int new_config.version]
+          ) |> respond
+        end
     else
       `String ("Unauthorized Access") |> respond' ~code:`Unauthorized
   end

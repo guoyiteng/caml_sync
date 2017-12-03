@@ -80,13 +80,11 @@ let backup_working_files () =
 let init url token =
   (* TODO: should not insert token directly *)
   (* Makes a dummy call to check if the url is a caml_sync server *)
-  let () = print_endline "1" in
   Client.get (Uri.of_string (url^"/version/"^token)) >>= fun (resp, body) ->
-  let () = print_endline "2" in
   let code = resp |> Response.status |> Code.code_of_status in
   (* First checks if pass token test by the response status code *)
   if code = 401 then
-    `Empty |> Cohttp_lwt.Body.to_string >|= fun _ -> print_endline "Token entered is incorrect"
+    `Empty |> Cohttp_lwt.Body.to_string >|= fun _ -> print_endline "Token entered is incorrect\n"
   else
     (* body |> Cohttp_lwt.Body.to_string >|= fun body -> *)
     let open Ezjsonm in
@@ -96,7 +94,7 @@ let init url token =
     | `O (("version", v )::_) ->
       if Sys.file_exists ".config" then
         raise (File_existed "[.config] already exsits; it seems like the current directory
-          has already been initialized into a caml_sync client directory")
+          has already been initialized into a caml_sync client directory\n")
       else
         let config = {
           client_id = "TODO";
@@ -106,10 +104,10 @@ let init url token =
         } in
         update_config config;
         (* Lwt_main.run (sync ()) *)
-    | _ -> print_endline "The address you entered does not seem to be a valid caml_sync address"
+    | _ -> print_endline "The address you entered does not seem to be a valid caml_sync address\n"
 
 let sync =
-  Client.get (Uri.of_string ("www.google.com")) >>= fun (resp, body) ->
+  Client.get (Uri.of_string ("http://www.google.com")) >>= fun (resp, body) ->
   body |> Cohttp_lwt.Body.to_string >|= fun body ->
   print_endline "hey boi"
 
@@ -124,21 +122,22 @@ let () =
     Lwt_main.run sync
   else
     if (Array.length Sys.argv) = 2 && (Array.get Sys.argv 1) = "init" then
-      let () = print_endline "You are initializing the current directory as a
-        caml_sync directory; Please indicate the address of the server you are
-        linking to:\n" in
-      match read_line () with
-      | exception End_of_file -> ()
-      | url ->
+      print_endline "\nYou are initializing current directory as a caml_sync\
+                     directory; Please indicate the address of the server you are\
+                     linking to:\n";
         match read_line () with
         | exception End_of_file -> ()
-        | token -> let () = print_endline
-                       ("Please enter the password for the server at "
-                        ^ url ^ " to connect to the server:\n") in
-          Lwt_main.run (init url token)
-    else
-      print_endline "usage:\n
-        caml_sync init <url> <token> ->\n
-        \tinits the current directory as a client directory
-        caml_sync ->\n
-        \tsyncs files in local directories with files in server\n"
+        | url ->
+          print_endline
+            ("Please enter the password for the server at "
+             ^ url ^ " to connect to the server:\n");
+          match read_line () with
+          | exception End_of_file -> ()
+          | token ->
+            Lwt_main.run (init url token)
+      else
+        print_endline "usage:\n\
+                       caml_sync init <url> <token> ->\n\
+                       \tinits the current directory as a client directory\
+                       caml_sync ->\n\
+                       \tsyncs files in local directories with files in server\n"

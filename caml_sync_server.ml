@@ -14,9 +14,11 @@ type config = {
   version: int;
 }
 
+module StrMap = Map.Make(String)
+
 (* keyed on filename, value is content of the file
  * [(filename, [line1; line2; line3]); ...] *)
-type state = (string * string list) list
+type state = StrMap
 
 let default_config = {
   server_id = "default";
@@ -59,15 +61,39 @@ let calc_file_diffs_between_states state1 state2 =
   raise Unimplemented
 
 let apply_version_diff_to_state version_diff state =
-  raise Unimplemented
+  let open StrMap in
+  List.fold_left
+    (fun acc filediff ->
+       let cur_file = filediff.file_name in
+       let to_delete = filediff.is_deleted in
+       let content_diff = filediff.content_diff in
+       if not(mem cur_file acc) then
+         begin
+           if (to_delete) then failwith "Invalid version diff"
+           else
+             (* create new file *)
+             let new_content = apply_diff [] content_diff in
+             add cur_file new_content acc
+         end
+       else
+         begin
+           if to_delete then remove cur_file acc
+           else let old_content = find cur_file acc in
+             let new_content = apply_diff old_content content_diff in
+             add cur_file new_content acc
+         end
+    ) state (version_diff.edited_files)
 
 let calc_diff_by_version v_from v_to =
-  assert (v_from < v_to);
-  let init_state = [] in
+  assert (v_from <= v_to);
+  if v_from = v_to then []
+  else let init_state = StrMap.empty in
   let rec update_to_version state cur_ver ver = begin
     let v_json = Ezjsonm.from_channel
         (open_in ("version_" ^ string_of_int cur_ver ^ ".diff")) in
     let v_diff = parse_version_diff_json v_json in
+    assert (v_diff.prev_version = cur_ver - 1);
+    assert (v_diff.cur_version = cur_ver);
     let new_state = apply_version_diff_to_state v_diff state in
     if cur_ver = ver then
       new_state

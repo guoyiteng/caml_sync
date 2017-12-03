@@ -26,11 +26,11 @@ val calc_file_diffs_between_states: state -> state -> file_diff list
  *  we apply all changes in [version_diff] to [state]. *)
 val apply_version_diff_to_state: version_diff -> state -> state
 
-(* [calc_diff_by_version v_from v_to] returns the difference between version
- * [v_from] and version [v_to]
- * requires: [v_from] < [v_to].
+(* [calc_diff_by_version v_from v_to] returns the list of edited files
+ * between version [v_from] and version [v_to]
+ * requires: [v_from] <= [v_to].
 *)
-val calc_diff_by_version: int -> int -> version_diff
+val calc_diff_by_version: int -> int -> file_diff list
 
 (* Handle GET request at "/version".
  * returns: a json containing [cur_version] to the client. *)

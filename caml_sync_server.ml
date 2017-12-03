@@ -36,7 +36,12 @@ let write_config c =
   |> Ezjsonm.to_channel (open_out "config.json")
 
 let init token =
-  write_config {default_config with token = token}
+  write_config {default_config with token = token};
+  { 
+    prev_version = 0;
+    cur_version = 0;
+    edited_files = []
+  } |> build_version_diff_json |> Ezjsonm.to_channel (open_out "version_0.diff")
 
 let load_config () =
   let open Ezjsonm in
@@ -101,7 +106,7 @@ let handle_post_diff_from_client = post "/diff" begin fun
           let new_config = {config with version = new_version} in
           let save_json = {
             req_v_diff with 
-            prev_version = config.version; 
+            prev_version = config.version;
             cur_version = new_version
           } |> build_version_diff_json in
           Ezjsonm.to_channel (open_out ("version_" ^ (string_of_int new_version) ^ ".diff")) save_json;

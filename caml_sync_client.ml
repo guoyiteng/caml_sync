@@ -70,31 +70,33 @@ let get_latest_version config =
 let get_update_diff config =
   failwith("unimplemented")
 
-(* [search_dir dir_handle acc dir_name] recursively searches for all the files
- * in the directory represented by [dir_handle] or its subdirectories,
- * and returns a list of all such files of approved suffixes
+(* [search_dir dir_handle acc dir_name valid_exts]
+ * recursively searches for all the files in the directory
+ * represented by [dir_handle] or its subdirectories,
+ * and returns a list of all such files of approved suffixes in [valid_exts]
  * requires: [dir_handle] is a valid directory handle returned by Unix.opendir. *)
-let rec search_dir dir_handle acc dir_name =
+let rec search_dir dir_handle acc dir_name valid_exts =
   match Unix.readdir dir_handle with
   | exception End_of_file ->
     let () = Unix.closedir dir_handle in acc
   | s_name ->
-    if Sys.is_directory s_name then
-      let sub_d_path = dir_name ^ Filename.dir_sep ^ s_name in
-      let sub_d_handle = Unix.opendir sub_d_path in
-      let sub_acc = search_dir sub_d_handle acc sub_d_path in
-       search_dir dir_handle (sub_acc @ acc) dir_name
-    else if Filename.check_suffix s_name ".txt" then
-      let file_path = dir_name ^ Filename.dir_sep ^ s_name in
-      search_dir dir_handle (file_path::acc) dir_name
-    else search_dir dir_handle acc dir_name
+    let path = dir_name ^ Filename.dir_sep ^ s_name in
+    if Sys.is_directory path && s_name <> "." && s_name <> ".." then
+      let _ = print_endline path in
+      let sub_d_handle = Unix.opendir path in
+      let sub_acc = search_dir sub_d_handle acc path valid_exts in
+       search_dir dir_handle (sub_acc @ acc) dir_name valid_exts
+    else if List.mem (Filename.extension s_name) valid_exts then
+      search_dir dir_handle (path::acc) dir_name valid_exts
+    else search_dir dir_handle acc dir_name valid_exts
 
 (* [get_all_filenames dir] returns a list of all the files in directory [dir] or
  * its subdirectories that are of approved suffixes *)
 let get_all_filenames dir =
+  let valid_extensions = [".ml"; ".txt"] in
   let d_handle =
     try Unix.opendir dir  with | _ -> raise Not_found
-     in search_dir d_handle [] dir
+  in search_dir d_handle [] dir valid_extensions
 
 let post_local_diff config version_diff =
   failwith("unimplemented")

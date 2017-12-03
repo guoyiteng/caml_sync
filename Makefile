@@ -5,10 +5,10 @@ svr:
 server_template:
 	ocamlbuild -use-ocamlfind server_template.native && ./server_template.native
 runclient:
-	ocamlbuild -use-ocamlfind caml_rsync_client.native
-	rm -f client/caml_rsync_client.native
-	mv caml_rsync_client.native client/caml_rsync_client.native
-	./client/caml_rsync_client.native
+	ocamlbuild -use-ocamlfind caml_sync_client.native
+	rm -f client/caml_sync_client.native
+	mv caml_sync_client.native client/caml_sync_client.native
+	./client/caml_sync_client.native
 check:
 	bash checktypes.sh
 debug:

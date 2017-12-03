@@ -1,3 +1,3 @@
 open Core
-open Server
-open Client
+open Caml_sync_client
+open Caml_sync_server

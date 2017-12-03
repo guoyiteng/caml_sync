@@ -80,7 +80,9 @@ let backup_working_files () =
 let init url token =
   (* TODO: should not insert token directly *)
   (* Makes a dummy call to check if the url is a caml_sync server *)
+  let () = print_endline "1" in
   Client.get (Uri.of_string (url^"/version/"^token)) >>= fun (resp, body) ->
+  let () = print_endline "2" in
   let code = resp |> Response.status |> Code.code_of_status in
   (* First checks if pass token test by the response status code *)
   if code = 401 then

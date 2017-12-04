@@ -3,6 +3,12 @@ open Lwt
 open Cohttp
 open Cohttp_lwt_unix
 
+module StrSet = Set.Make (String)
+
+let hidden_dir = ".caml_sync/"
+
+let valid_extensions = [".ml"; ".mli"; ".txt"]
+
 type config = {
   client_id: string;
   url: string;
@@ -33,7 +39,6 @@ let load_config () =
     failwith("Cannot find .config. It seems the directory hass not
       been initialized to a caml_sync directory.")
   | _ -> failwith("Unexpected internal error")
-
 
 let update_config config =
   try
@@ -73,7 +78,7 @@ let get_update_diff config =
 (* [search_dir dir_handle acc_file acc_dir dir_name valid_exts]
  * recursively searches for all the files in the directory
  * represented by [dir_handle] or its subdirectories,
- * and returns a list of all such files of approved suffixes in [valid_exts]
+ * and returns a set of all such files of approved suffixes in [valid_exts]
  * requires: [dir_handle] is a valid directory handle returned by Unix.opendir. *)
 let rec search_dir dir_handle acc_file acc_dir dir_name valid_exts =
   (* similar to BFS *)
@@ -93,16 +98,16 @@ let rec search_dir dir_handle acc_file acc_dir dir_name valid_exts =
        * after having seen all files in the current directory *)
       search_dir dir_handle acc_file (path::acc_dir) dir_name valid_exts
     else if List.mem (Filename.extension p_name) valid_exts then
-      search_dir dir_handle (path::acc_file) acc_dir dir_name valid_exts
+      let new_fileset = StrSet.add path acc_file in
+      search_dir dir_handle new_fileset acc_dir dir_name valid_exts
     else search_dir dir_handle acc_file acc_dir dir_name valid_exts
 
-(* [get_all_filenames dir] returns a list of all the files in directory [dir] or
- * its subdirectories that are of approved suffixes *)
+(* [get_all_filenames dir] returns a set of all the filenames
+ * in directory [dir] or its subdirectories that are of approved suffixes *)
 let get_all_filenames dir =
-  let valid_extensions = [".ml"; ".txt"] in
   let d_handle =
     try Unix.opendir dir  with | _ -> raise Not_found
-  in search_dir d_handle [] [] dir valid_extensions
+  in search_dir d_handle StrSet.empty [] dir valid_extensions
 
 let post_local_diff config version_diff =
   failwith("unimplemented")
@@ -116,10 +121,20 @@ let check_both_modified_files str_list version_diff =
 let rename_both_modified str_list =
   failwith("unimplemented")
 
-let compare_file file_name =
-  failwith("unimplemented")
+let compare_file filename =
+  let cur_file_content = read_file filename in
+  let old_file_content =
+    try read_file (hidden_dir ^ filename)
+    with | File_not_found _ -> [] (* this file is newly created *)
+  in {
+    file_name = filename;
+    is_deleted = false;
+    content_diff = calc_diff old_file_content cur_file_content
+  }
 
 let compare_working_backup str_list =
+  let filenames_last_sync = get_all_filenames hidden_dir in
+  let filenames_cur = get_all_filenames "." in
   failwith("unimplemented")
 
 let backup_working_files () =

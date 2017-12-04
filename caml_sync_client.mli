@@ -53,7 +53,7 @@ val compare_file : string -> file_diff
  * working directory to the backup version. The backup version is the previous
  * local version in the hidden directory ".caml_sync/".
  *)
-val compare_working_backup : string list -> version_diff
+val compare_working_backup : string list -> file_diff list
 
 (* [backup_working_files _] makes a copy for all the files in current working
  * directory and back them up in ".caml_sync/".

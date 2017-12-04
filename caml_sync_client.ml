@@ -174,12 +174,12 @@ let compare_working_backup () =
 let check_both_modified_files modified_file_diffs version_diff =
   failwith("unimplemented")
 
-let rename_both_modified str_list =
+let rename_both_modified both_modified_lst =
   List.iter
     (fun elem ->
        let extension = Filename.extension elem in
        let old_f_name = String.(sub elem 0 ((length elem) - (length extension))) in
-       Sys.rename elem (old_f_name ^ "_local" ^ extension))
+       Sys.rename elem (old_f_name ^ "_local" ^ extension)) both_modified_lst
 
 let generate_client_version_diff server_diff =
   failwith("unimplemented")

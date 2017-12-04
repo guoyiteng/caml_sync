@@ -22,7 +22,7 @@ val get_latest_version : config -> int option
  * sends a post request to the server to retrieve the difference between
  * the local version and the server's latest version, and returns the difference
  *)
-val get_update_diff : config -> version_diff
+val get_update_diff : config -> version_diff option
 
 (* [post_local_diff config version_diff] sends the difference between the local version
  * and the server version to the server via json
@@ -64,4 +64,4 @@ val backup_working_files : unit -> unit
 val init : string -> string -> unit Lwt.t
 
 (* Performs all the sync work *)
-val sync : unit Lwt.t
+val sync : unit -> unit Lwt.t

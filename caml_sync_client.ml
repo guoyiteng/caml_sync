@@ -127,7 +127,7 @@ let compare_file filename =
  * of [str] with [prefix_new]
  * requires: [prefix_old] is a prefix of [str] *)
 let replace_prefix str prefix_old prefix_new =
-  let suffix = String.(sub str (length prefix_old) (length str)) in
+  let suffix = String.(sub str (length prefix_old) (length str - 1)) in
   prefix_new ^ suffix
 
 (* [has_prefix_in_lst str_to_check lst_prefices] checks whether [str_to_check]
@@ -136,12 +136,12 @@ let has_prefix_in_lst str_to_check lst_prefices =
   List.fold_left
     (fun acc elem ->
        try
-         let substr = String.sub str_to_check 0 (String.length elem - 1) in
-         if substr = elem then true else acc
+         let sub_str = String.sub str_to_check 0 (String.length elem - 1) in
+         if sub_str = elem then true else acc
        with | Invalid_argument _ -> acc
 ) false lst_prefices
 
-let compare_working_backup str_list =
+let compare_working_backup () =
   let filenames_last_sync = get_all_filenames hidden_dir in
   let unwanted_strs =
     ["." ^ Filename.dir_sep ^ hidden_dir; "." ^ Filename.dir_sep ^ ".config"] in

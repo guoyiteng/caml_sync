@@ -72,4 +72,4 @@ val backup_working_files : string list -> unit
 val init : string -> string -> unit Lwt.t
 
 (* Performs all the sync work *)
-val sync : unit -> unit Lwt.t
+val sync : unit -> unit

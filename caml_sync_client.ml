@@ -112,6 +112,9 @@ let get_all_filenames dir =
 let post_local_diff config version_diff =
   failwith("unimplemented")
 
+let check_invalid_filename () =
+  failwith "yyz also delete_file in core"
+
 let compare_file filename =
   let cur_file_content = read_file filename in
   let old_file_content =
@@ -172,7 +175,7 @@ let compare_working_backup () =
   file_diff_lst1 @ file_diff_lst0
 
 let check_both_modified_files modified_file_diffs version_diff =
-  failwith("unimplemented")
+  failwith("gyt")
 
 let rename_both_modified both_modified_lst =
   List.iter
@@ -182,17 +185,21 @@ let rename_both_modified both_modified_lst =
        Sys.rename elem (old_f_name ^ "_local" ^ extension)) both_modified_lst
 
 let generate_client_version_diff server_diff =
-  (* 1. rename both_modified_lst
-   * 2. copy files in both_modified_lst from hidden to local directory
-   * 3. apply server_diff to local directory
-   * 4. remove everything in hidden directory
-   * 5. call backup_working_files to copy everything from local directory to
+  (* 0. create local_diff with compare_working_backup
+   * 1. call check_both_modified_files to get both_modified_lst
+   * 2. rename files in both_modified_lst
+   * 3. copy files in both_modified_lst from hidden to local directory
+   * 4. apply server_diff to local directory
+   * 5. remove everything in hidden directory
+   * 6. call backup_working_files to copy everything from local directory to
    *    hidden directory
+   * 7. remove files in both_modified_list from local_diff
+   *    and return the resulting version_diff
    *)
-  failwith("unimplemented")
+  failwith("gyt")
 
 let backup_working_files ignore_lst =
-  failwith("unimplemented")
+  failwith("yyz")
 
 let sync =
   Client.get (Uri.of_string ("http://www.google.com")) >>= fun (resp, body) ->

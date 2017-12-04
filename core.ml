@@ -193,5 +193,5 @@ let write_file filename content =
 
 let delete_file filename =
   let lst_split = String.split_on_char '/' filename in
-  try Sys.remove filename; 
+  try Sys.remove filename
   with Sys_error _ -> raise (File_not_found "Cannot remove file.");

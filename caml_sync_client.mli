@@ -29,6 +29,10 @@ val get_update_diff : config -> version_diff
  *)
 val post_local_diff : config -> version_diff -> int
 
+(* [check_invalid_filename ()] returns true if the local directory contains
+ * any file whose filename (excluding file extension) ends with "_local" *)
+val check_invalid_filename : unit -> bool
+
 (* [compare_file filename] returns all the updates that the user has made
  * on the file represented by [filename] since the latest sync *)
  val compare_file : string -> file_diff

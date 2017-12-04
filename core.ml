@@ -156,7 +156,7 @@ let create_dir filename =
 
 let read_json filename =
   if not (Sys.file_exists filename)
-  then raise (File_existed "Cannot file to read does not exist.")
+  then raise (File_not_found "File to read does not exist.")
   else let in_c = open_in filename in
   let json = Ezjsonm.from_channel in_c in
   close_in in_c; json
@@ -168,9 +168,16 @@ let write_json filename w_json =
   close_out out_c
 
 let read_file filename =
-  failwith "todo"
-  (* let in_c = open_in filename in
-  Std.input_list chan *)
+  if not (Sys.file_exists filename)
+  then raise (File_not_found "File to read does not exist.")
+  else
+    let read_line channel =
+      try Some (input_line channel) with End_of_file -> None in
+    let rec lines_from_files in_c acc =
+      match (read_line in_c) with
+        | None -> List.rev acc
+        | Some s -> lines_from_files in_c (s :: acc) in
+    lines_from_files (open_in filename) []
 
 let write_file filename content =
   if Sys.file_exists filename

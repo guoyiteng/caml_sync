@@ -142,9 +142,6 @@ let post_local_diff config version_diff =
     ) with _ -> failwith("Server Error\n")
   in Lwt_main.run (Lwt.pick [request; timeout])
 
-let check_invalid_filename () =
-  failwith "yyz also delete_file in core"
-
 let compare_file filename =
   let cur_file_content = read_file filename in
   let old_file_content =
@@ -169,10 +166,36 @@ let has_prefix_in_lst str_to_check lst_prefices =
   List.fold_left
     (fun acc elem ->
        try
-         let sub_str = String.sub str_to_check 0 (String.length elem - 1) in
+         let sub_str = String.sub str_to_check 0 (String.length elem) in
          if sub_str = elem then true else acc
        with | Invalid_argument _ -> acc
 ) false lst_prefices
+
+(* [contains s1 s2] checks if [s2] is a substring of [s1] *)
+let contains s1 s2 =
+  try
+    let len = String.length s2 in
+    for i = 0 to String.length s1 - len do
+      if String.sub s1 i len = s2 then raise Exit
+    done;
+    false
+  with Exit -> true
+
+let check_invalid_filename () =
+  let unwanted_strs =
+    ["." ^ Filename.dir_sep ^ hidden_dir; "." ^ Filename.dir_sep ^ ".config"] in
+  let filenames_cur = get_all_filenames "." in
+  StrSet.fold
+    (fun elem acc ->
+        if has_prefix_in_lst elem unwanted_strs then acc (* skip this file *)
+        else let extension = Filename.extension elem in
+          let open String in
+          let to_i = length elem - length extension in
+          let from_i = to_i - length "_local" in
+          try
+            let match_str = sub elem from_i to_i in
+            if  match_str = "_local" then true else acc
+          with | _ -> acc) filenames_cur false
 
 let compare_working_backup () =
   let filenames_last_sync = get_all_filenames hidden_dir in

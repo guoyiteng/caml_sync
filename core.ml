@@ -191,7 +191,16 @@ let write_file filename content =
     in let oc = open_out filename in
     print_content oc content; close_out oc
 
+let rec recursively_rm_dir rev_lst =
+  match rev_lst with
+  | [] | _::[] -> ()
+  | (h::t) as lst ->
+    let cur_dir = List.fold_left
+        (fun acc d -> d ^ Filename.dir_sep ^ acc) "" lst in
+    try Unix.rmdir cur_dir; recursively_rm_dir t with
+      Unix.Unix_error (Unix.ENOTEMPTY, "rmdir", _) -> ()
+
 let delete_file filename =
-  let lst_split = String.split_on_char '/' filename in
-  try Sys.remove filename
-  with Sys_error _ -> raise (File_not_found "Cannot remove file.");
+  let rev_lst_split = String.split_on_char '/' filename |> List.rev |> List.tl in
+  try Sys.remove filename; recursively_rm_dir rev_lst_split
+  with Sys_error _ -> raise (File_not_found "Cannot remove file.")

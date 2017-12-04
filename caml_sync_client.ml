@@ -251,7 +251,9 @@ let generate_client_version_diff server_diff =
    *)
   failwith("gyt")
 
-(* copy a file at [from_name] to [to_name], creating additional *)
+(* copy a file at [from_name] to [to_name], creating additional directories
+ * if [to_name] indicates writing a file deeper down than the current directory
+ *)
 let copy_file from_name to_name =
   write_file to_name (read_file from_name)
 
@@ -262,7 +264,7 @@ let backup_working_files ignore_lst =
     get_all_filenames "." |> StrSet.filter
       (fun elem -> not(has_prefix_in_lst elem unwanted_strs)) in
   StrSet.iter (fun f ->
-      let to_name = "todo" in
+      let to_name = replace_prefix f "./" hidden_dir in
       copy_file f to_name) filenames_cur
 
 let sync () =

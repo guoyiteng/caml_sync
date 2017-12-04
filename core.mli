@@ -56,6 +56,10 @@ val read_json: string -> [> Ezjsonm.t]
  * specified by [filename] *)
 val write_json : string -> Ezjsonm.t -> unit
 
+(* [read_file filename] returns a list of strings representing lines in the file
+ * represented by [filename] *)
+val read_file : string -> string list
+
 (* [write_file filename content] creates a new file named [filename].
  * [filename] may include any sub-directory.
  * [content] is a list of lines representing the content

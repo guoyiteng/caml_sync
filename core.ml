@@ -167,6 +167,11 @@ let write_json filename w_json =
   w_json |> Ezjsonm.to_channel out_c;
   close_out out_c
 
+let read_file filename =
+  failwith "todo"
+  (* let in_c = open_in filename in
+  Std.input_list chan *)
+
 let write_file filename content =
   if Sys.file_exists filename
   then raise (File_existed "Cannot create file.")

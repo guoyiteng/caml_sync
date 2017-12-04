@@ -70,7 +70,7 @@ let get_latest_version config =
 let get_update_diff config =
   failwith("unimplemented")
 
-(* [search_dir dir_handle acc dir_name valid_exts]
+(* [search_dir dir_handle acc_file acc_dir dir_name valid_exts]
  * recursively searches for all the files in the directory
  * represented by [dir_handle] or its subdirectories,
  * and returns a list of all such files of approved suffixes in [valid_exts]
@@ -89,6 +89,8 @@ let rec search_dir dir_handle acc_file acc_dir dir_name valid_exts =
   | p_name ->
     let path = dir_name ^ Filename.dir_sep ^ p_name in
     if Sys.is_directory path && p_name <> "." && p_name <> ".." then
+      (* save information about this subdirectory in acc_dir, to be processed
+       * after having seen all files in the current directory *)
       search_dir dir_handle acc_file (path::acc_dir) dir_name valid_exts
     else if List.mem (Filename.extension p_name) valid_exts then
       search_dir dir_handle (path::acc_file) acc_dir dir_name valid_exts

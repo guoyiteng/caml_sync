@@ -147,6 +147,9 @@ let has_prefix_in_lst str_to_check lst_prefices =
        with | Invalid_argument _ -> acc
 ) false lst_prefices
 
+(* [replace_prefix str prefix_old prefix_new] replaces the prefix [prefix_old]
+ * of [str] with [prefix_new]
+ * requires: [prefix_old] is a prefix of [str] *)
 let replace_prefix str prefix_old prefix_new =
   let suffix = String.(sub str (length prefix_old) (length str)) in
   prefix_new ^ suffix

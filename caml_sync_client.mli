@@ -50,11 +50,15 @@ val check_both_modified_files : file_diff list -> version_diff -> string list
  * have merge conflicts *)
 val rename_both_modified : string list -> unit
 
-(* [generate_client_version_diff server_diff] is the [Some client_diff] where [client_diff] is the new update this client has made. If this client does not make any update, the result of this function is [None]. *)
+(* [generate_client_version_diff server_diff]
+ * returns: [None] if the current client has not made any update since the last sync,
+ * otherwise returns [Some client_diff] where [client_diff] is the new update that
+ * the current client has made
+ *)
 val generate_client_version_diff : version_diff -> version_diff option
 
 (* [backup_working_files _] makes a copy for all the files in current working
- * directory and back them up in ".caml_sync/".
+ * directory and backs them up in ".caml_sync/".
  *)
 val backup_working_files : unit -> unit
 

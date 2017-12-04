@@ -171,7 +171,7 @@ let compare_working_backup () =
             }::acc) deleted_files [] in
   file_diff_lst1 @ file_diff_lst0
 
-let check_both_modified_files str_list version_diff =
+let check_both_modified_files modified_file_diffs version_diff =
   failwith("unimplemented")
 
 let rename_both_modified str_list =

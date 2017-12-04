@@ -75,20 +75,24 @@ let get_update_diff config =
  * represented by [dir_handle] or its subdirectories,
  * and returns a list of all such files of approved suffixes in [valid_exts]
  * requires: [dir_handle] is a valid directory handle returned by Unix.opendir. *)
-let rec search_dir dir_handle acc dir_name valid_exts =
+let rec search_dir dir_handle acc_file acc_dir dir_name valid_exts =
+  (* similar to BFS *)
   match Unix.readdir dir_handle with
   | exception End_of_file ->
-    let () = Unix.closedir dir_handle in acc
-  | s_name ->
-    let path = dir_name ^ Filename.dir_sep ^ s_name in
-    if Sys.is_directory path && s_name <> "." && s_name <> ".." then
-      let _ = print_endline path in
-      let sub_d_handle = Unix.opendir path in
-      let sub_acc = search_dir sub_d_handle acc path valid_exts in
-       search_dir dir_handle (sub_acc @ acc) dir_name valid_exts
-    else if List.mem (Filename.extension s_name) valid_exts then
-      search_dir dir_handle (path::acc) dir_name valid_exts
-    else search_dir dir_handle acc dir_name valid_exts
+    let () = Unix.closedir dir_handle in
+    (* go into subdirectories *)
+    List.fold_left
+      (fun acc a_dir ->
+         let sub_d_handle = Unix.opendir a_dir in
+         search_dir sub_d_handle acc [] a_dir valid_exts
+      ) acc_file acc_dir
+  | p_name ->
+    let path = dir_name ^ Filename.dir_sep ^ p_name in
+    if Sys.is_directory path && p_name <> "." && p_name <> ".." then
+      search_dir dir_handle acc_file (path::acc_dir) dir_name valid_exts
+    else if List.mem (Filename.extension p_name) valid_exts then
+      search_dir dir_handle (path::acc_file) acc_dir dir_name valid_exts
+    else search_dir dir_handle acc_file acc_dir dir_name valid_exts
 
 (* [get_all_filenames dir] returns a list of all the files in directory [dir] or
  * its subdirectories that are of approved suffixes *)
@@ -96,7 +100,7 @@ let get_all_filenames dir =
   let valid_extensions = [".ml"; ".txt"] in
   let d_handle =
     try Unix.opendir dir  with | _ -> raise Not_found
-  in search_dir d_handle [] dir valid_extensions
+  in search_dir d_handle [] [] dir valid_extensions
 
 let post_local_diff config version_diff =
   failwith("unimplemented")

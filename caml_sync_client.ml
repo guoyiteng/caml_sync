@@ -119,7 +119,11 @@ let check_both_modified_files str_list version_diff =
   failwith("unimplemented")
 
 let rename_both_modified str_list =
-  failwith("unimplemented")
+  List.iter
+    (fun elem ->
+       let extension = Filename.extension elem in
+       let old_f_name = String.(sub elem 0 ((length elem) - (length extension))) in
+       Sys.rename elem (old_f_name ^ "_local" ^ extension))
 
 let compare_file filename =
   let cur_file_content = read_file filename in

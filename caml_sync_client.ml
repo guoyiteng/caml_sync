@@ -142,6 +142,9 @@ let post_local_diff config version_diff =
     ) with _ -> failwith("Server Error\n")
   in Lwt_main.run (Lwt.pick [request; timeout])
 
+let check_invalid_filename () =
+  failwith "yyz also delete_file in core"
+
 let compare_file filename =
   let cur_file_content = read_file filename in
   let old_file_content =
@@ -157,7 +160,7 @@ let compare_file filename =
  * of [str] with [prefix_new]
  * requires: [prefix_old] is a prefix of [str] *)
 let replace_prefix str prefix_old prefix_new =
-  let suffix = String.(sub str (length prefix_old) (length str)) in
+  let suffix = String.(sub str (length prefix_old) (length str - 1)) in
   prefix_new ^ suffix
 
 (* [has_prefix_in_lst str_to_check lst_prefices] checks whether [str_to_check]
@@ -166,12 +169,12 @@ let has_prefix_in_lst str_to_check lst_prefices =
   List.fold_left
     (fun acc elem ->
        try
-         let substr = String.sub str_to_check 0 (String.length elem - 1) in
-         if substr = elem then true else acc
+         let sub_str = String.sub str_to_check 0 (String.length elem - 1) in
+         if sub_str = elem then true else acc
        with | Invalid_argument _ -> acc
 ) false lst_prefices
 
-let compare_working_backup str_list =
+let compare_working_backup () =
   let filenames_last_sync = get_all_filenames hidden_dir in
   let unwanted_strs =
     ["." ^ Filename.dir_sep ^ hidden_dir; "." ^ Filename.dir_sep ^ ".config"] in
@@ -201,18 +204,32 @@ let compare_working_backup str_list =
             }::acc) deleted_files [] in
   file_diff_lst1 @ file_diff_lst0
 
-let check_both_modified_files str_list version_diff =
-  failwith("unimplemented")
+let check_both_modified_files modified_file_diffs version_diff =
+  failwith("gyt")
 
-let rename_both_modified str_list =
+let rename_both_modified both_modified_lst =
   List.iter
     (fun elem ->
        let extension = Filename.extension elem in
        let old_f_name = String.(sub elem 0 ((length elem) - (length extension))) in
-       Sys.rename elem (old_f_name ^ "_local" ^ extension))
+       Sys.rename elem (old_f_name ^ "_local" ^ extension)) both_modified_lst
 
-let backup_working_files () =
-  failwith("unimplemented")
+let generate_client_version_diff server_diff =
+  (* 0. create local_diff with compare_working_backup
+   * 1. call check_both_modified_files to get both_modified_lst
+   * 2. rename files in both_modified_lst
+   * 3. copy files in both_modified_lst from hidden to local directory
+   * 4. apply server_diff to local directory
+   * 5. remove everything in hidden directory
+   * 6. call backup_working_files to copy everything from local directory to
+   *    hidden directory
+   * 7. remove files in both_modified_list from local_diff
+   *    and return the resulting version_diff
+   *)
+  failwith("gyt")
+
+let backup_working_files ignore_lst =
+  failwith("yyz")
 
 let sync () =
   let config = load_config () in

@@ -29,6 +29,10 @@ val get_update_diff : config -> version_diff option
  *)
 val post_local_diff : config -> version_diff -> int
 
+(* [check_invalid_filename ()] returns true if the local directory contains
+ * any file whose filename (excluding file extension) ends with "_local" *)
+val check_invalid_filename : unit -> bool
+
 (* [compare_file filename] returns all the updates that the user has made
  * on the file represented by [filename] since the latest sync *)
  val compare_file : string -> file_diff
@@ -50,13 +54,17 @@ val check_both_modified_files : file_diff list -> version_diff -> string list
  * have merge conflicts *)
 val rename_both_modified : string list -> unit
 
-(* [generate_client_version_diff server_diff] is the [Some client_diff] where [client_diff] is the new update this client has made. If this client does not make any update, the result of this function is [None]. *)
+(* [generate_client_version_diff server_diff]
+ * returns: [None] if the current client has not made any update since the last sync,
+ * otherwise returns [Some client_diff] where [client_diff] is the new update
+ * that the current client has made
+ *)
 val generate_client_version_diff : version_diff -> version_diff option
 
-(* [backup_working_files _] makes a copy for all the files in current working
- * directory and back them up in ".caml_sync/".
+(* [backup_working_files ignore_lst] copies all the files in current working
+ * directory to ".caml_sync/", except those files in [ignore_lst]
  *)
-val backup_working_files : unit -> unit
+val backup_working_files : string list -> unit
 
 (* [init url token] creates a hidden ".config" file and stores [url] and [token]
  * in ".config". It also creates a folder ".caml_sync/" in the current directory.

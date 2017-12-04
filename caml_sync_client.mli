@@ -52,15 +52,15 @@ val rename_both_modified : string list -> unit
 
 (* [generate_client_version_diff server_diff]
  * returns: [None] if the current client has not made any update since the last sync,
- * otherwise returns [Some client_diff] where [client_diff] is the new update that
- * the current client has made
+ * otherwise returns [Some client_diff] where [client_diff] is the new update
+ * that the current client has made
  *)
 val generate_client_version_diff : version_diff -> version_diff option
 
-(* [backup_working_files _] makes a copy for all the files in current working
- * directory and backs them up in ".caml_sync/".
+(* [backup_working_files ignore_lst] copies all the files in current working
+ * directory to ".caml_sync/", except those files in [ignore_lst]
  *)
-val backup_working_files : unit -> unit
+val backup_working_files : string list -> unit
 
 (* [init url token] creates a hidden ".config" file and stores [url] and [token]
  * in ".config". It also creates a folder ".caml_sync/" in the current directory.

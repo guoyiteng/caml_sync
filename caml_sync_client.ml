@@ -182,9 +182,16 @@ let rename_both_modified both_modified_lst =
        Sys.rename elem (old_f_name ^ "_local" ^ extension)) both_modified_lst
 
 let generate_client_version_diff server_diff =
+  (* 1. rename both_modified_lst
+   * 2. copy files in both_modified_lst from hidden to local directory
+   * 3. apply server_diff to local directory
+   * 4. remove everything in hidden directory
+   * 5. call backup_working_files to copy everything from local directory to
+   *    hidden directory
+   *)
   failwith("unimplemented")
 
-let backup_working_files () =
+let backup_working_files ignore_lst =
   failwith("unimplemented")
 
 let sync =

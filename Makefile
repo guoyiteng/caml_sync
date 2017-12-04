@@ -8,12 +8,16 @@ sync:
 	ocamlbuild -use-ocamlfind -pkg cohttp-lwt-unix caml_sync_client.native
 	rm -f client/caml_sync_client.native
 	mv caml_sync_client.native client/caml_sync_client.native
+	cd client
 	./client/caml_sync_client.native
+	cd ..
 init:
 	ocamlbuild -use-ocamlfind -pkg cohttp-lwt-unix caml_sync_client.native
 	rm -f client/caml_sync_client.native
 	mv caml_sync_client.native client/caml_sync_client.native
+	cd client
 	./client/caml_sync_client.native init
+	cd ..
 check:
 	bash checktypes.sh
 debug:

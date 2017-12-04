@@ -132,10 +132,50 @@ let compare_file filename =
     content_diff = calc_diff old_file_content cur_file_content
   }
 
+(* [has_prefix_in_lst str_to_check lst_prefices] checks whether [str_to_check]
+ * has a prefix in [lst_prefices] *)
+let has_prefix_in_lst str_to_check lst_prefices =
+  List.fold_left
+    (fun acc elem ->
+       try
+         let substr = String.sub str_to_check 0 (String.length elem - 1) in
+         if substr = elem then true else acc
+       with | Invalid_argument _ -> acc
+) false lst_prefices
+
+let replace_prefix str prefix_old prefix_new =
+  let suffix = String.(sub str (length prefix_old) (length str)) in
+  prefix_new ^ suffix
+
 let compare_working_backup str_list =
   let filenames_last_sync = get_all_filenames hidden_dir in
-  let filenames_cur = get_all_filenames "." in
-  failwith("unimplemented")
+  let unwanted_strs =
+    ["." ^ Filename.dir_sep ^ hidden_dir; "." ^ Filename.dir_sep ^ ".config"] in
+  let filenames_cur =
+    get_all_filenames "." |> StrSet.filter
+      (fun elem -> not(has_prefix_in_lst elem unwanted_strs)) in
+  let file_diff_lst0 =
+    (* all files in working directory *)
+    StrSet.fold
+              (fun f_name acc -> (compare_file f_name)::acc) filenames_cur []
+  in let file_diff_lst1 =
+    (* all files in sync directory but not in working direcoty.
+     * These files have been removed after the last update *)
+       let trans_filenames_last_sync =
+         (* map every string in filenames_last_sync to a new string with "./"
+          * as prefix rather than hidden_dir *)
+         StrSet.map
+           (fun str -> replace_prefix str hidden_dir "./") filenames_last_sync in
+       let deleted_files =
+         StrSet.diff trans_filenames_last_sync filenames_last_sync in
+       StrSet.fold
+         (fun f_name acc ->
+            {
+              file_name = f_name;
+              is_deleted = true;
+              content_diff = calc_diff [] []
+            }::acc) deleted_files [] in
+  file_diff_lst1 @ file_diff_lst0
 
 let backup_working_files () =
   failwith("unimplemented")

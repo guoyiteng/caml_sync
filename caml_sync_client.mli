@@ -29,12 +29,13 @@ val get_update_diff : config -> version_diff
  *)
 val post_local_diff : config -> version_diff -> int
 
-(* [compare_file filename] returns the all the updates that the user has made
- * since the latest sync *)
+(* [compare_file filename] returns all the updates that the user has made
+ * on the file represented by [filename] since the latest sync *)
  val compare_file : string -> file_diff
 
-(* [compare_working_backup () ] returns the list of file_diff that have been modified
- * after the last sync with the server
+(* [compare_working_backup () ] returns a list of file_diff's that
+ * have been modified after the last sync with the server.
+ * The previous local version is stored in the hidden directory ".caml_sync/".
  *)
 val compare_working_backup : unit -> file_diff list
 
@@ -51,12 +52,6 @@ val rename_both_modified : string list -> unit
 
 (* [generate_client_version_diff server_diff] is the [Some client_diff] where [client_diff] is the new update this client has made. If this client does not make any update, the result of this function is [None]. *)
 val generate_client_version_diff : version_diff -> version_diff option
-
-(* [compare_working_backup both_modified] compares all the files in current
- * working directory to the backup version. The backup version is the previous
- * local version in the hidden directory ".caml_sync/".
- *)
-(* val compare_working_backup : string list -> file_diff list *)
 
 (* [backup_working_files _] makes a copy for all the files in current working
  * directory and back them up in ".caml_sync/".

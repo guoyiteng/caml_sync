@@ -112,19 +112,6 @@ let get_all_filenames dir =
 let post_local_diff config version_diff =
   failwith("unimplemented")
 
-let check_modified_files () =
-  failwith("unimplemented")
-
-let check_both_modified_files str_list version_diff =
-  failwith("unimplemented")
-
-let rename_both_modified str_list =
-  List.iter
-    (fun elem ->
-       let extension = Filename.extension elem in
-       let old_f_name = String.(sub elem 0 ((length elem) - (length extension))) in
-       Sys.rename elem (old_f_name ^ "_local" ^ extension))
-
 let compare_file filename =
   let cur_file_content = read_file filename in
   let old_file_content =
@@ -135,6 +122,13 @@ let compare_file filename =
     is_deleted = false;
     content_diff = calc_diff old_file_content cur_file_content
   }
+
+(* [replace_prefix str prefix_old prefix_new] replaces the prefix [prefix_old]
+ * of [str] with [prefix_new]
+ * requires: [prefix_old] is a prefix of [str] *)
+let replace_prefix str prefix_old prefix_new =
+  let suffix = String.(sub str (length prefix_old) (length str)) in
+  prefix_new ^ suffix
 
 (* [has_prefix_in_lst str_to_check lst_prefices] checks whether [str_to_check]
  * has a prefix in [lst_prefices] *)
@@ -147,13 +141,6 @@ let has_prefix_in_lst str_to_check lst_prefices =
        with | Invalid_argument _ -> acc
 ) false lst_prefices
 
-(* [replace_prefix str prefix_old prefix_new] replaces the prefix [prefix_old]
- * of [str] with [prefix_new]
- * requires: [prefix_old] is a prefix of [str] *)
-let replace_prefix str prefix_old prefix_new =
-  let suffix = String.(sub str (length prefix_old) (length str)) in
-  prefix_new ^ suffix
-
 let compare_working_backup str_list =
   let filenames_last_sync = get_all_filenames hidden_dir in
   let unwanted_strs =
@@ -164,10 +151,10 @@ let compare_working_backup str_list =
   let file_diff_lst0 =
     (* all files in working directory *)
     StrSet.fold
-              (fun f_name acc -> (compare_file f_name)::acc) filenames_cur []
+      (fun f_name acc -> (compare_file f_name)::acc) filenames_cur []
   in let file_diff_lst1 =
-    (* all files in sync directory but not in working direcoty.
-     * These files have been removed after the last update *)
+       (* all files in sync directory but not in working direcoty.
+        * These files have been removed after the last update *)
        let trans_filenames_last_sync =
          (* map every string in filenames_last_sync to a new string with "./"
           * as prefix rather than hidden_dir *)
@@ -183,6 +170,19 @@ let compare_working_backup str_list =
               content_diff = calc_diff [] []
             }::acc) deleted_files [] in
   file_diff_lst1 @ file_diff_lst0
+
+let check_both_modified_files str_list version_diff =
+  failwith("unimplemented")
+
+let rename_both_modified str_list =
+  List.iter
+    (fun elem ->
+       let extension = Filename.extension elem in
+       let old_f_name = String.(sub elem 0 ((length elem) - (length extension))) in
+       Sys.rename elem (old_f_name ^ "_local" ^ extension))
+
+let generate_client_version_diff server_diff =
+  failwith("unimplemented")
 
 let backup_working_files () =
   failwith("unimplemented")

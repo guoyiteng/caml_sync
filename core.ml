@@ -189,7 +189,8 @@ let write_file filename content =
       | [] -> ()
       | h::t -> Printf.fprintf channel "%s\n" h; print_content channel t
     in let oc = open_out filename in
-    print_content oc content; close_out oc
+    print_content oc content;
+    close_out oc
 
 let rec recursively_rm_dir rev_lst =
   match rev_lst with

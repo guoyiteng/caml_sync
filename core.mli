@@ -53,7 +53,8 @@ val parse_version_diff_json : Ezjsonm.t -> version_diff
 val read_json: string -> [> Ezjsonm.t]
 
 (* [write_json filename w_json] writes the json to an output file
- * specified by [filename] *)
+ * specified by [filename]. Makes directories when necessary
+ * if [filename] indicates a file to be written in a subdirectory *)
 val write_json : string -> Ezjsonm.t -> unit
 
 (* [read_file filename] returns a list of strings representing lines in the file
@@ -64,6 +65,8 @@ val read_file : string -> string list
  * [filename] may include any sub-directory.
  * [content] is a list of lines representing the content
  * to be written to the new file.
+ * Makes directories when necessary if [filename] indicates a file
+ * to be written in a subdirectory
  * raises: [File_existed "Cannot create file."] if there already exists
  * a file with the same name as [filename] *)
 val write_file : string -> string list -> unit

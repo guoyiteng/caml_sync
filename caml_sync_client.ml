@@ -251,8 +251,19 @@ let generate_client_version_diff server_diff =
    *)
   failwith("gyt")
 
+(* copy a file at [from_name] to [to_name], creating additional *)
+let copy_file from_name to_name =
+  write_file to_name (read_file from_name)
+
 let backup_working_files ignore_lst =
-  failwith("yyz")
+  let unwanted_strs =
+    ["." ^ Filename.dir_sep ^ hidden_dir; "." ^ Filename.dir_sep ^ ".config"] in
+  let filenames_cur =
+    get_all_filenames "." |> StrSet.filter
+      (fun elem -> not(has_prefix_in_lst elem unwanted_strs)) in
+  StrSet.iter (fun f ->
+      let to_name = "todo" in
+      copy_file f to_name) filenames_cur
 
 let sync () =
   let config = load_config () in

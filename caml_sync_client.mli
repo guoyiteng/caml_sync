@@ -29,31 +29,34 @@ val get_update_diff : config -> version_diff
  *)
 val post_local_diff : config -> version_diff -> int
 
-(* [check_modified_files () ] returns the list of files that have been modified
+(* [compare_file filename] returns the all the updates that the user has made
+ * since the latest sync *)
+ val compare_file : string -> file_diff
+
+(* [compare_working_backup () ] returns the list of file_diff that have been modified
  * after the last sync with the server
  *)
-val check_modified_files : unit -> string list
+val compare_working_backup : unit -> file_diff list
 
-(* [check_both_modified_files modified_files version_diff]
+(* [check_both_modified_files modified_file_diffs version_diff]
  * returns a list of filenames that indicates files that are inconsistent
  * in the following three versions: the local working version,
  * the remote server version, and the backup version in the hidden folder *)
-val check_both_modified_files : string list -> version_diff -> string list
+val check_both_modified_files : file_diff list -> version_diff -> string list
 
 (* [rename_both_modified both_modified] renames local files in [both_modified]
  * by appending "_local" to their filenames, because those files
  * have merge conflicts *)
 val rename_both_modified : string list -> unit
 
-(* [compare_file filename] returns the all the updates that the user has made
- * since the latest sync *)
-val compare_file : string -> file_diff
+(* [generate_client_version_diff server_diff] is the [Some client_diff] where [client_diff] is the new update this client has made. If this client does not make any update, the result of this function is [None]. *)
+val generate_client_version_diff : version_diff -> version_diff option
 
 (* [compare_working_backup both_modified] compares all the files in current
  * working directory to the backup version. The backup version is the previous
  * local version in the hidden directory ".caml_sync/".
  *)
-val compare_working_backup : string list -> file_diff list
+(* val compare_working_backup : string list -> file_diff list *)
 
 (* [backup_working_files _] makes a copy for all the files in current working
  * directory and back them up in ".caml_sync/".

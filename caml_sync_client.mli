@@ -59,7 +59,7 @@ val check_both_modified_files :
  * or rename the file. If [is_deleted] is true, we should delete the file. *)
 val rename_both_modified : (string * bool) list -> unit
 
-(* [generate_client_version_diff server_diff]
+(* [generate_client_version_diff server_diff] returns [(both_modified_lst, local_diff_files)]. 
  * returns: [None] if the current client has not made any update since the last sync,
  * otherwise returns [Some client_diff] where [client_diff] is the new update
  * that the current client has made

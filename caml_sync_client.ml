@@ -379,7 +379,7 @@ let init url token =
         | Some v ->
           if Sys.file_exists ".config" then
             raise (File_existed "[.config] already exsits; it seems like the current directory\
-                                 has already been initialized into a caml_sync client directory")
+                                 has update_configalready been initialized into a caml_sync client directory")
           else
             let config = {
               client_id = "TODO";
@@ -388,7 +388,7 @@ let init url token =
               version = 0
             } in
             update_config config;
-            (* TODO: handle when .caml_sync already exists *)
+            remove_dir_and_files ".caml_sync";
             Unix.mkdir ".caml_sync" 0o770;
             sync ()
         | None ->

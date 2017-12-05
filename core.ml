@@ -62,53 +62,17 @@ let calc_diff base_content new_content =
       let from_diagonal = mat.(r-1).(c-1) in
       if from_diagonal = cur
       then backtrack (r-1) (c-1) acc
-      else
-        begin
-          if from_left = cur
-          then backtrack r (c-1) ((Delete c)::acc)
-          else
-            begin
-              if from_top = cur
-              then
-                match acc with
-                | (Insert (line, content_lst)) :: t when c = line ->
-                  let cur_content = arr_new.(r-1) in
-                  backtrack (r-1) c ((Insert (c, cur_content :: content_lst)) :: t)
-                | _ -> backtrack (r-1) c ((Insert (c, [arr_new.(r-1)])) :: acc)
-              else failwith "impossible"
-            end
-        end in
-  let lst_diffs = backtrack (length arr_new) (length arr_base) [] in
-  let new_lst_diffs =
-    List.fold_left
-      (fun acc op ->
-         match acc with
-         | [] -> [op]
-         | h::t -> begin
-             match h with
-             | Delete _ -> op::acc
-             | Insert (line_prev, ins_lst_prev) -> begin
-                 match op with
-                 | Delete _ -> begin
-                     op :: Insert (line_prev, List.rev ins_lst_prev) :: t
-                   end
-                 | Insert (line_cur, ins_lst_cur) -> begin
-                     if line_cur = line_prev + (List.length ins_lst_prev)
-                     then
-                       let _ = assert (List.length ins_lst_cur = 1) in
-                       let new_ins_lst =
-                         (List.hd (ins_lst_prev)) :: ins_lst_cur in
-                       (Insert (line_prev, new_ins_lst)) :: t
-                     else op :: acc
-                   end
-               end
-           end
-      ) [] lst_diffs in
-  if List.length new_lst_diffs = 0 then new_lst_diffs 
-  else List.rev (match (List.hd new_lst_diffs) with
-      | Delete _ -> new_lst_diffs
-      | Insert (line, ins_lst) -> 
-        Insert (line, List.rev ins_lst)::(List.tl new_lst_diffs))
+      else if from_left = cur
+      then backtrack r (c-1) ((Delete c)::acc)
+      else if from_top = cur
+      then match acc with
+        | (Insert (line, content_lst)) :: t when c = line ->
+          let cur_content = arr_new.(r-1) in
+          backtrack (r-1) c ((Insert (c, cur_content :: content_lst)) :: t)
+        | _ -> backtrack (r-1) c ((Insert (c, [arr_new.(r-1)])) :: acc)
+      else failwith "impossible"
+  in
+  backtrack (length arr_new) (length arr_base) []
 
 
 let apply_diff base_content diff_content =

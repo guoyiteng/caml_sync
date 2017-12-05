@@ -38,30 +38,27 @@ let load_config () =
       }
     with
     | Not_found -> failwith("Fails to load [.config]: incorrect format")
-    | _ -> failwith("Unexpected Error")
   with
   | Sys_error e ->
     print_endline e;
     failwith("Cannot find .config. It seems the directory has not
       been initialized to a caml_sync directory.")
-  | _ -> failwith("Unexpected internal error")
 
 let update_config config =
   try
-    let json =
-      dict [
-        "client_id", (string config.client_id);
-        "url", (string config.url);
-        "token", (string config.token);
-        "version", (int config.version);
-      ] in
-    to_channel (open_out ".config") json
+  let json =
+    dict [
+      "client_id", (string config.client_id);
+      "url", (string config.url);
+      "token", (string config.token);
+      "version", (int config.version);
+    ] in
+  to_channel (open_out ".config") json
   with
   | Sys_error e ->
-    print_endline "Cannot find .config. It seems the directory has not
-      been initialized to a caml_sync directory.";
+    print_endline "Cannot find .config. It seems the directory has not\
+                   been initialized to a caml_sync directory.";
     print_endline e
-  | _ -> print_endline "Unexpected internal error"
 
 (* [search_dir dir_handle acc_file acc_dir dir_name valid_exts]
  * recursively searches for all the files in the directory
@@ -99,7 +96,7 @@ let get_all_filenames dir =
 
 let post_local_diff config version_diff =
   let request = Client.post
-      ~body:(version_diff |> Core.build_version_diff_json |> to_string |> Cohttp_lwt_body.of_string)
+      ~body:(version_diff |> Core.build_version_diff_json |> to_string |> Cohttp_lwt__Body.of_string)
       (Uri.of_string (config.url^"/diff?token="^config.token))
     >>= fun (resp, body) ->
     let code = resp |> Response.status |> Code.code_of_status in
@@ -328,20 +325,27 @@ let sync () =
 let init url token =
   (* TODO: should not insert token directly *)
   (* Makes a dummy call to check if the url is a caml_sync server *)
-  Client.get (Uri.of_string (url^"/version/?token="^token)) >>= fun (resp, body) ->
+  (* let uri = (Uri.add_query_param' (Uri.of_string (url^"/version")) ("token", token))  in
+     let () = print_endline (Uri.to_string uri) in *)
+  let open Uri in
+  let uri = Uri.of_string  ("//"^url) in
+  let uri = with_path uri "version" in
+  let uri = with_scheme uri (Some "http") in
+  let uri = Uri.add_query_param' uri ("token", token) in
+  Client.get uri >>= fun (resp, body) ->
   let code = resp |> Response.status |> Code.code_of_status in
   (* First checks if pass token test by the response status code *)
   if code = 401 then
-    `Empty |> Cohttp_lwt.Body.to_string >|= fun _ -> print_endline "Token entered is incorrect\n"
+    `Empty |> Cohttp_lwt.Body.to_string >|= fun _ -> print_endline "Token entered is incorrect"
   else
     body |> Cohttp_lwt.Body.to_string >|= fun body ->
     match (from_string body) with
     | `O (json) ->
-      begin match List.assoc_opt "verson" json with
+      begin match List.assoc_opt "version" json with
         | Some v ->
           if Sys.file_exists ".config" then
-            raise (File_existed "[.config] already exsits; it seems like the current directory
-            has already been initialized into a caml_sync client directory\n")
+            raise (File_existed "[.config] already exsits; it seems like the current directory\
+            has already been initialized into a caml_sync client directory")
           else
             let config = {
               client_id = "TODO";
@@ -352,9 +356,9 @@ let init url token =
             let () = update_config config in
             sync ()
         | None ->
-          print_endline "The address you entered does not seem to be a valid caml_sync address\n"
+          print_endline "The address you entered does not seem to be a valid caml_sync address"
       end
-    | _ -> print_endline "The address you entered does not seem to be a valid caml_sync address\n"
+    | _ -> print_endline "The address you entered does not seem to be a valid caml_sync address"
 
 (* usage:
  *  caml_sync init <url> <token> ->
@@ -369,12 +373,12 @@ let () =
   if (Array.length Sys.argv) = 2 && (Array.get Sys.argv 1) = "init" then
     let () = print_endline "\nYou are initializing current directory as a caml_sync\
                             directory; Please indicate the address of the server you are\
-                            connecting to:\n" in
+                            connecting to:" in
     match read_line () with
     | exception End_of_file -> ()
     | url ->
       let () = print_endline ("Please enter the password for the server at "
-                              ^ url ^ " to connect to the server:\n") in
+                              ^ url ^ " to connect to the server:") in
       match read_line () with
       | exception End_of_file -> ()
       | token ->
@@ -384,4 +388,4 @@ let () =
                    caml_sync init <url> <token> ->\n\
                    \tinits the current directory as a client directory\
                    caml_sync ->\n\
-                   \tsyncs files in local directories with files in server\n"
+                   \tsyncs files in local directories with files in server"

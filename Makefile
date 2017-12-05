@@ -4,7 +4,7 @@ server:
 	rm -f server/caml_sync_server.native
 	mv caml_sync_server.native server/caml_sync_server.native
 client:
-	ocamlbuild -use-ocamlfind -pkg cohttp-lwt-unix caml_sync_client.native
+	ocamlbuild -use-ocamlfind caml_sync_client.native
 	rm -f client/caml_sync_client.native
 	mv caml_sync_client.native client/caml_sync_client.native
 compile: server client

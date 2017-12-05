@@ -22,7 +22,7 @@ val get_latest_version : config -> int option
  * sends a post request to the server to retrieve the difference between
  * the local version and the server's latest version, and returns the difference
 *)
-val get_update_diff : config -> version_diff option
+val get_update_diff : config -> (string * bool) list * file_diff list
 
 (* [post_local_diff config version_diff] sends the difference between the local version
  * and the server version to the server via json

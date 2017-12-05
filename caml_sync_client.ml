@@ -231,7 +231,7 @@ let rename_both_modified both_modified_lst =
 let copy_file from_name to_name =
   write_file to_name (read_file from_name)
 
-(* [copy_files from_names to_names] copy all files in [from_names] to 
+(* [copy_files from_names to_names] copy all files in [from_names] to
  * [to_names]. *)
 let copy_files from_names to_names =
   List.iter2 (fun f t -> copy_file f t) from_names to_names
@@ -248,26 +248,26 @@ let generate_client_version_diff server_diff =
   (*  0. create local_diff with compare_working_backup. *)
   let local_files_diff = compare_working_backup () in
   (* 1. call check_both_modified_files to get both_modified_lst. *)
-  let both_modified_lst = 
+  let both_modified_lst =
     check_both_modified_files local_files_diff server_diff in
   (* 2. rename files in both_modified_lst. *)
   rename_both_modified both_modified_lst;
-  (* 3. copy files in both_modified_lst from hidden to local 
+  (* 3. copy files in both_modified_lst from hidden to local
    * directory. *)
   let from_file_names =
     both_modified_lst |> List.map (fun (filename, is_deleted) -> filename) in
-  let to_file_names = 
-    from_file_names |> List.map 
+  let to_file_names =
+    from_file_names |> List.map
       (fun filename -> replace_prefix filename "." hidden_dir) in
   copy_files from_file_names to_file_names;
   (* 4. remove everything in hidden directory. *)
   get_all_filenames hidden_dir |> StrSet.iter delete_file;
   (* 5. apply server_diff to local directory. *)
-  List.iter (fun {file_name; is_deleted; content_diff} ->  
+  List.iter (fun {file_name; is_deleted; content_diff} ->
       if is_deleted
       then delete_file file_name
       else
-        let content = read_file file_name in 
+        let content = read_file file_name in
         delete_file file_name;
         apply_diff content content_diff |> write_file file_name
     ) server_diff.edited_files;
@@ -277,8 +277,8 @@ let generate_client_version_diff server_diff =
   (* 7. remove files in both_modified_list from local_diff
    * and return the resulting version_diff *)
   let return_files_diff = List.filter (fun {file_name} ->
-      List.exists 
-        (fun (ele, _) -> ele = file_name) 
+      List.exists
+        (fun (ele, _) -> ele = file_name)
         both_modified_lst |> not
     ) local_files_diff in
   (both_modified_lst, return_files_diff)
@@ -310,11 +310,20 @@ let get_update_diff config =
 
 let sync () =
   let config = load_config () in
-  match get_update_diff config with
-  | Some diff ->
-    let new_v = post_local_diff config diff in
-    update_config {config with version=new_v}
-  | None -> ()
+  if check_invalid_filename () then
+    print_endline "Please resolve local merge conflict before syncing with the server.\n"
+  else
+    match get_update_diff config with
+    | (m_list, []) ->
+      assert (m_list=[])
+    | (m_list, diff_list) ->
+      let version_diff = {
+        prev_version = config.version;
+        cur_version = config.version;
+        edited_files = diff_list;
+      } in
+      let new_v = post_local_diff config version_diff in
+      update_config {config with version=new_v}
 
 let init url token =
   (* TODO: should not insert token directly *)

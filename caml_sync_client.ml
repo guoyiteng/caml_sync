@@ -23,9 +23,9 @@ type config = {
 
 let timeout =
   fun () ->
-  bind (Lwt_unix.sleep 5.)
-    (fun _ ->
-       failwith("Timeout.\n") )
+    bind (Lwt_unix.sleep 5.)
+      (fun _ ->
+         failwith("Timeout.\n") )
 
 let load_config () =
   try
@@ -43,20 +43,20 @@ let load_config () =
   | Sys_error e ->
     print_endline e;
     failwith("Cannot find .config. It seems the directory has not\
-     been initialized to a caml_sync directory.")
+              been initialized to a caml_sync directory.")
 
 let update_config config =
   try
-  let json =
-    dict [
-      "client_id", (string config.client_id);
-      "url", (string config.url);
-      "token", (string config.token);
-      "version", (int config.version);
-    ] in
-  let out = open_out ".config"in
-  to_channel out json;
-  flush out
+    let json =
+      dict [
+        "client_id", (string config.client_id);
+        "url", (string config.url);
+        "token", (string config.token);
+        "version", (int config.version);
+      ] in
+    let out = open_out ".config"in
+    to_channel out json;
+    flush out
   with
   | Sys_error e ->
     print_endline "Cannot find .config. It seems the directory has not\
@@ -248,6 +248,15 @@ let backup_working_files () =
       let to_name = replace_prefix f "." hidden_dir in
       copy_file f to_name) filenames_cur
 
+(* [remove_dir_and_files folder_name] removes the folder [folder_name] and its
+ * content. It is equal to "rm -rf folder_name" in Unix. If [folder_name] is not
+ * found, do nothing here. *)
+let remove_dir_and_files folder_name =
+  try
+    get_all_filenames folder_name |> StrSet.iter delete_file
+  with
+  | Not_found -> ()
+
 let generate_client_version_diff server_diff =
   (*  0. create local_diff with compare_working_backup. *)
   let local_files_diff = compare_working_backup () in
@@ -265,7 +274,7 @@ let generate_client_version_diff server_diff =
       (fun filename -> replace_prefix filename "." hidden_dir) in
   copy_files from_file_names to_file_names;
   (* 4. remove everything in hidden directory. *)
-  get_all_filenames hidden_dir |> StrSet.iter delete_file;
+  remove_dir_and_files hidden_dir;
   (* 5. apply server_diff to local directory. *)
   List.iter (fun {file_name; is_deleted; content_diff} ->
       if is_deleted
@@ -370,7 +379,7 @@ let init url token =
         | Some v ->
           if Sys.file_exists ".config" then
             raise (File_existed "[.config] already exsits; it seems like the current directory\
-            has already been initialized into a caml_sync client directory")
+                                 has already been initialized into a caml_sync client directory")
           else
             let config = {
               client_id = "TODO";

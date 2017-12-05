@@ -54,7 +54,7 @@ let update_config config =
     to_channel (open_out ".config") json
   with
   | Sys_error e ->
-    print_endline "Cannot find .config. It seems the directory hass not
+    print_endline "Cannot find .config. It seems the directory has not
       been initialized to a caml_sync directory.";
     print_endline e
   | _ -> print_endline "Unexpected internal error"
@@ -185,13 +185,13 @@ let contains s1 s2 =
  * right before its extension *)
 let contains_local filename =
   let extension = Filename.extension filename in
-    let open String in
-    let to_i = length filename - length extension in
-    let from_i = to_i - length "_local" in
-    try
-      let match_str = sub filename from_i to_i in
-      match_str = "_local"
-    with | _ -> false
+  let open String in
+  let to_i = length filename - length extension in
+  let from_i = to_i - length "_local" in
+  try
+    let match_str = sub filename from_i to_i in
+    match_str = "_local"
+  with | _ -> false
 
 let check_invalid_filename () =
   let unwanted_strs =
@@ -253,36 +253,53 @@ let rename_both_modified both_modified_lst =
        let old_f_name = String.(sub elem 0 ((length elem) - (length extension))) in
        Sys.rename elem (old_f_name ^ "_local" ^ extension)) both_modified_lst
 
-let generate_client_version_diff server_diff =
-  (* 0. create local_diff with compare_working_backup
-   * 1. call check_both_modified_files to get both_modified_lst
-   * 2. rename files in both_modified_lst
-   * 3. copy files in both_modified_lst from hidden to local directory
-   * 4. remove everything in hidden directory
-   * 5. apply server_diff to local directory
-   * 6. call backup_working_files to copy everything from local directory to
-   *    hidden directory
-   * 7. remove files in both_modified_list from local_diff
-   *    and return the resulting version_diff
-  *)
-  failwith "gyt"
-
-
 (* copy a file at [from_name] to [to_name], creating additional directories
  * if [to_name] indicates writing a file deeper down than the current directory
 *)
 let copy_file from_name to_name =
   write_file to_name (read_file from_name)
 
-let backup_working_files () =
-  let unwanted_strs =
-    ["." ^ Filename.dir_sep ^ hidden_dir; "." ^ Filename.dir_sep ^ ".config"] in
-  let filenames_cur =
-    get_all_filenames "." |> StrSet.filter
-      (fun elem -> not(has_prefix_in_lst elem unwanted_strs)) in
-  StrSet.iter (fun f ->
-      let to_name = replace_prefix f "./" hidden_dir in
-      copy_file f to_name) filenames_cur
+(* [copy_files from_names to_names] copy all files in [from_names] to 
+ * [to_names]. *)
+let copy_files from_names to_names =
+  List.iter2 (fun f t -> copy_file f t) from_names to_names
+
+let generate_client_version_diff server_diff =
+  (* 0. create local_diff with compare_working_backup
+   * 1. call check_both_modified_files to get both_modified_lst
+   * 2. rename files in both_modified_lst
+   * 3. copy files in both_modified_lst from hidden to local directory
+   * 4. remove everything in hidden directory   
+   * 5. apply server_diff to local directory
+   * 6. call backup_working_files to copy everything from local directory to
+   *    hidden directory
+   * 7. remove files in both_modified_list from local_diff
+   *    and return the resulting version_diff
+  *)
+  let local_files_diff = compare_working_backup () in
+  let both_modified_lst = 
+    check_both_modified_files local_files_diff server_diff in
+  rename_both_modified both_modified_lst;
+  let from_file_names =
+    both_modified_lst |> List.map (fun (filename, is_deleted) -> filename) in
+  let to_file_names = 
+    from_file_names |> List.map 
+      (fun filename -> replace_prefix filename "./" hidden_dir) in
+  copy_files from_file_names to_file_names;
+  
+
+
+
+
+  let backup_working_files () =
+    let unwanted_strs =
+      ["." ^ Filename.dir_sep ^ hidden_dir; "." ^ Filename.dir_sep ^ ".config"] in
+    let filenames_cur =
+      get_all_filenames "." |> StrSet.filter
+        (fun elem -> not(has_prefix_in_lst elem unwanted_strs)) in
+    StrSet.iter (fun f ->
+        let to_name = replace_prefix f "./" hidden_dir in
+        copy_file f to_name) filenames_cur
 
 let sync () =
   let config = load_config () in

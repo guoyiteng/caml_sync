@@ -140,7 +140,7 @@ let replace_prefix str prefix_old prefix_new =
   let open String in
   if length str < length prefix_old
   then failwith "prefix to be replaced does not exist in current string"
-  else let suffix = sub str (length prefix_old) (length str) in
+  else let suffix = sub str (length prefix_old) (length str - length prefix_old) in
     prefix_new ^ suffix
 
 (* [has_prefix_in_lst str_to_check lst_prefices] checks whether [str_to_check]
@@ -167,12 +167,11 @@ let contains s1 s2 =
 (* [contains_local filename] checks whether [filename] contains "_local"
  * right before its extension *)
 let contains_local filename =
-  let extension = Filename.extension filename in
+  let no_extension = Filename.chop_extension filename in
   let open String in
-  let to_i = length filename - length extension in
-  let from_i = to_i - length "_local" in
+  let from_i = length no_extension - length "_local" in
   try
-    let match_str = sub filename from_i to_i in
+    let match_str = sub filename from_i (length "_local")    in
     match_str = "_local"
   with | _ -> false
 

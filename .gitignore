@@ -1,6 +1,5 @@
 server/
 client/
-debug.ml
 
 *.annot
 *.cmo

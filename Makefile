@@ -28,6 +28,12 @@ check:
 	bash checktypes.sh
 debug:
 	ocamlbuild -use-ocamlfind -tag 'debug' debug.byte
+	ocamlbuild -use-ocamlfind -tag 'debug' caml_sync_client.native
+	rm -f client/caml_sync_client.native
+	mv caml_sync_client.native client/caml_sync_client.native
+	ocamlbuild -use-ocamlfind -tag 'debug' caml_sync_server.native
+	rm -f server/caml_sync_server.native
+	mv caml_sync_server.native server/caml_sync_server.native
 clean:
 	ocamlbuild -clean
 install:

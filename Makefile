@@ -31,7 +31,8 @@ debug:
 clean:
 	ocamlbuild -clean
 install:
-	opam install opium ezjsonm
+	opam update
+	opam install opium ezjsonm cohttp
 test:
 	ocamlbuild -use-ocamlfind core_test.byte
 	./core_test.byte

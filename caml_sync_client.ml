@@ -248,7 +248,8 @@ let check_both_modified_files modified_file_diffs version_diff =
 let rename_both_modified both_modified_lst =
   List.iter
     (fun (elem, to_delete) ->
-       let extension = Filename.extension elem in
+       if to_delete then delete_file elem
+       else let extension = Filename.extension elem in
        let old_f_name = String.(sub elem 0 ((length elem) - (length extension))) in
        Sys.rename elem (old_f_name ^ "_local" ^ extension)) both_modified_lst
 

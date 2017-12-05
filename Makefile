@@ -37,8 +37,10 @@ debug:
 	mv caml_sync_server.byte server/caml_sync_server.byte
 clean:
 	ocamlbuild -clean
-	rm -rf client/*
-	rm -rf client2/*
+	rm -rf client
+	rm -rf client2
+	mkdir client
+	mkdir client2
 install:
 	opam update
 	opam install opium ezjsonm cohttp

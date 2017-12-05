@@ -6,9 +6,13 @@ open Ezjsonm
 
 module StrSet = Set.Make (String)
 
-let hidden_dir = ".caml_sync/"
+let hidden_dir = ".caml_sync"
 
 let valid_extensions = [".ml"; ".mli"; ".txt"]
+
+let unwanted_strs =
+  ["." ^ Filename.dir_sep ^ hidden_dir ^ Filename.dir_sep;
+   "." ^ Filename.dir_sep ^ ".config"]
 
 type config = {
   client_id: string;
@@ -58,34 +62,6 @@ let update_config config =
       been initialized to a caml_sync directory.";
     print_endline e
   | _ -> print_endline "Unexpected internal error"
-
-let get_latest_version config =
-  let request = Client.get (Uri.of_string
-                              (config.url^"/version/?token="^config.token)) >>=
-    fun (resp, body) ->
-    let code = resp |> Response.status |> Code.code_of_status in
-    if code = 401 then
-      failwith("Unauthorized: Token incorrect. \n")
-    else
-      failwith("unimplemented") in
-  Lwt_main.run (Lwt.pick [request; timeout])
-
-let generate_client_version_diff server_diff =
-  failwith("unimplemented")
-
-let get_update_diff config =
-  let request = Client.get
-      (Uri.of_string (config.url^"/diff?token="
-                      ^config.token^"from="^(string_of_int config.version) ))
-    >>= fun (resp, body) ->
-    let code = resp |> Response.status |> Code.code_of_status in
-    if code = 401 then failwith("Unauthorized: Token incorrect. \n")
-    else try (
-      body |> Cohttp_lwt.Body.to_string >|= fun body ->
-      let diff = body |> from_string |> parse_version_diff_json in
-      generate_client_version_diff diff
-    ) with _ -> failwith("Server Error\n")
-  in Lwt_main.run (Lwt.pick [request; timeout])
 
 (* [search_dir dir_handle acc_file acc_dir dir_name valid_exts]
  * recursively searches for all the files in the directory
@@ -145,7 +121,7 @@ let post_local_diff config version_diff =
 let compare_file filename =
   let cur_file_content = read_file filename in
   let old_file_content =
-    try read_file (hidden_dir ^ filename)
+    try read_file (hidden_dir ^ Filename.dir_sep ^ filename)
     with | File_not_found _ -> [] (* this file is newly created *)
   in {
     file_name = filename;
@@ -194,8 +170,6 @@ let contains_local filename =
   with | _ -> false
 
 let check_invalid_filename () =
-  let unwanted_strs =
-    ["." ^ Filename.dir_sep ^ hidden_dir; "." ^ Filename.dir_sep ^ ".config"] in
   let filenames_cur = get_all_filenames "." in
   StrSet.fold
     (fun elem acc ->
@@ -204,8 +178,6 @@ let check_invalid_filename () =
 
 let compare_working_backup () =
   let filenames_last_sync = get_all_filenames hidden_dir in
-  let unwanted_strs =
-    ["." ^ Filename.dir_sep ^ hidden_dir; "." ^ Filename.dir_sep ^ ".config"] in
   let filenames_cur =
     get_all_filenames "." |> StrSet.filter
       (fun elem -> not(has_prefix_in_lst elem unwanted_strs)) in
@@ -217,10 +189,10 @@ let compare_working_backup () =
        (* all files in sync directory but not in working direcoty.
         * These files have been removed after the last update *)
        let trans_filenames_last_sync =
-         (* map every string in filenames_last_sync to a new string with "./"
+         (* map every string in filenames_last_sync to a new string with "."
           * as prefix rather than hidden_dir *)
          StrSet.map
-           (fun str -> replace_prefix str hidden_dir "./") filenames_last_sync in
+           (fun str -> replace_prefix str hidden_dir ".") filenames_last_sync in
        let deleted_files =
          StrSet.diff trans_filenames_last_sync filenames_last_sync in
        StrSet.fold
@@ -250,8 +222,8 @@ let rename_both_modified both_modified_lst =
     (fun (elem, to_delete) ->
        if to_delete then delete_file elem
        else let extension = Filename.extension elem in
-       let old_f_name = String.(sub elem 0 ((length elem) - (length extension))) in
-       Sys.rename elem (old_f_name ^ "_local" ^ extension)) both_modified_lst
+         let old_f_name = String.(sub elem 0 ((length elem) - (length extension))) in
+         Sys.rename elem (old_f_name ^ "_local" ^ extension)) both_modified_lst
 
 (* copy a file at [from_name] to [to_name], creating additional directories
  * if [to_name] indicates writing a file deeper down than the current directory
@@ -264,42 +236,77 @@ let copy_file from_name to_name =
 let copy_files from_names to_names =
   List.iter2 (fun f t -> copy_file f t) from_names to_names
 
+let backup_working_files () =
+  let filenames_cur =
+    get_all_filenames "." |> StrSet.filter
+      (fun elem -> not(has_prefix_in_lst elem unwanted_strs)) in
+  StrSet.iter (fun f ->
+      let to_name = replace_prefix f "." hidden_dir in
+      copy_file f to_name) filenames_cur
+
 let generate_client_version_diff server_diff =
-  (* 0. create local_diff with compare_working_backup
-   * 1. call check_both_modified_files to get both_modified_lst
-   * 2. rename files in both_modified_lst
-   * 3. copy files in both_modified_lst from hidden to local directory
-   * 4. remove everything in hidden directory   
-   * 5. apply server_diff to local directory
-   * 6. call backup_working_files to copy everything from local directory to
-   *    hidden directory
-   * 7. remove files in both_modified_list from local_diff
-   *    and return the resulting version_diff
-  *)
+  (*  0. create local_diff with compare_working_backup. *)
   let local_files_diff = compare_working_backup () in
+  (* 1. call check_both_modified_files to get both_modified_lst. *)
   let both_modified_lst = 
     check_both_modified_files local_files_diff server_diff in
+  (* 2. rename files in both_modified_lst. *)
   rename_both_modified both_modified_lst;
+  (* 3. copy files in both_modified_lst from hidden to local 
+   * directory. *)
   let from_file_names =
     both_modified_lst |> List.map (fun (filename, is_deleted) -> filename) in
   let to_file_names = 
     from_file_names |> List.map 
-      (fun filename -> replace_prefix filename "./" hidden_dir) in
+      (fun filename -> replace_prefix filename "." hidden_dir) in
   copy_files from_file_names to_file_names;
-  
+  (* 4. remove everything in hidden directory. *)
+  get_all_filenames hidden_dir |> StrSet.iter delete_file;
+  (* 5. apply server_diff to local directory. *)
+  List.iter (fun {file_name; is_deleted; content_diff} ->  
+      if is_deleted
+      then delete_file file_name
+      else
+        let content = read_file file_name in 
+        delete_file file_name;
+        apply_diff content content_diff |> write_file file_name
+    ) server_diff.edited_files;
+  (* 6. call backup_working_files to copy everything from local
+   * directory to hidden directory. *)
+  backup_working_files ();
+  (* 7. remove files in both_modified_list from local_diff
+   * and return the resulting version_diff *)
+  let return_files_diff = List.filter (fun {file_name} ->
+      List.exists 
+        (fun (ele, _) -> ele = file_name) 
+        both_modified_lst |> not
+    ) local_files_diff in
+  (both_modified_lst, return_files_diff)
 
+let get_latest_version config =
+  let request = Client.get (Uri.of_string
+                              (config.url^"/version/?token="^config.token)) >>=
+    fun (resp, body) ->
+    let code = resp |> Response.status |> Code.code_of_status in
+    if code = 401 then
+      failwith("Unauthorized: Token incorrect. \n")
+    else
+      failwith("unimplemented") in
+  Lwt_main.run (Lwt.pick [request; timeout])
 
-
-
-  let backup_working_files () =
-    let unwanted_strs =
-      ["." ^ Filename.dir_sep ^ hidden_dir; "." ^ Filename.dir_sep ^ ".config"] in
-    let filenames_cur =
-      get_all_filenames "." |> StrSet.filter
-        (fun elem -> not(has_prefix_in_lst elem unwanted_strs)) in
-    StrSet.iter (fun f ->
-        let to_name = replace_prefix f "./" hidden_dir in
-        copy_file f to_name) filenames_cur
+let get_update_diff config =
+  let request = Client.get
+      (Uri.of_string (config.url^"/diff?token="
+                      ^config.token^"from="^(string_of_int config.version) ))
+    >>= fun (resp, body) ->
+    let code = resp |> Response.status |> Code.code_of_status in
+    if code = 401 then failwith("Unauthorized: Token incorrect. \n")
+    else try (
+      body |> Cohttp_lwt.Body.to_string >|= fun body ->
+      let diff = body |> from_string |> parse_version_diff_json in
+      generate_client_version_diff diff
+    ) with _ -> failwith("Server Error\n")
+  in Lwt_main.run (Lwt.pick [request; timeout])
 
 let sync () =
   let config = load_config () in

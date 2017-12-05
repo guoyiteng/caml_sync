@@ -1,5 +1,6 @@
 server/
 client/
+client2/
 
 *.annot
 *.cmo

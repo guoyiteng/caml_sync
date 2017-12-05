@@ -403,7 +403,6 @@ let init url token =
               version = 0
             } in
             update_config config;
-            print_endline "wilson123123";
             remove_dir_and_files hidden_dir;
             Unix.mkdir hidden_dir 0o770;
             sync ()

@@ -253,8 +253,10 @@ let backup_working_files () =
  * found, do nothing here. *)
 let remove_dir_and_files folder_name =
   try
-    get_all_filenames folder_name |> StrSet.iter delete_file
+    get_all_filenames folder_name |> StrSet.iter delete_file;
+    Unix.rmdir folder_name
   with
+  | Unix.Unix_error _
   | Not_found -> ()
 
 let generate_client_version_diff server_diff =

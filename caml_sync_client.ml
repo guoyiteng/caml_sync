@@ -22,6 +22,7 @@ type config = {
 }
 
 let timeout =
+  fun () ->
   bind (Lwt_unix.sleep 5.)
     (fun _ ->
        failwith("Timeout.\n") )
@@ -37,12 +38,12 @@ let load_config () =
         version = get_int (List.assoc "version" dict);
       }
     with
-    | Not_found -> failwith("Fails to load [.config]: incorrect format")
+    | Not_found -> failwith("Failed to load [.config]: incorrect format")
   with
   | Sys_error e ->
     print_endline e;
-    failwith("Cannot find .config. It seems the directory has not
-      been initialized to a caml_sync directory.")
+    failwith("Cannot find .config. It seems the directory has not\
+     been initialized to a caml_sync directory.")
 
 let update_config config =
   try
@@ -53,7 +54,9 @@ let update_config config =
       "token", (string config.token);
       "version", (int config.version);
     ] in
-  to_channel (open_out ".config") json
+  let out = open_out ".config"in
+  to_channel out json;
+  flush out
   with
   | Sys_error e ->
     print_endline "Cannot find .config. It seems the directory has not\
@@ -95,9 +98,13 @@ let get_all_filenames dir =
   in search_dir d_handle StrSet.empty [] dir valid_extensions
 
 let post_local_diff config version_diff =
-  let request = Client.post
-      ~body:(version_diff |> Core.build_version_diff_json |> to_string |> Cohttp_lwt__Body.of_string)
-      (Uri.of_string (config.url^"/diff?token="^config.token))
+  let open Uri in
+  let uri = Uri.of_string  ("//"^config.url) in
+  let uri = with_path uri "diff" in
+  let uri = with_scheme uri (Some "http") in
+  let uri = Uri.add_query_param' uri ("token", config.token) in
+  let body = version_diff |> Core.build_version_diff_json |> Ezjsonm.to_string |> Cohttp_lwt__Body.of_string in
+  let request = Client.post ~body:(body) uri
     >>= fun (resp, body) ->
     let code = resp |> Response.status |> Code.code_of_status in
     if code = 401 then failwith("Unauthorized: Token incorrect. \n")
@@ -113,7 +120,7 @@ let post_local_diff config version_diff =
         end
       | _ -> failwith("Server Error: Unexpected response. \n")
     ) with _ -> failwith("Server Error\n")
-  in Lwt_main.run (Lwt.pick [request; timeout])
+  in Lwt_main.run (Lwt.pick [request; timeout ()])
 
 let compare_file filename =
   let cur_file_content = read_file filename in
@@ -289,24 +296,38 @@ let get_latest_version config =
       failwith("Unauthorized: Token incorrect. \n")
     else
       failwith("unimplemented") in
-  Lwt_main.run (Lwt.pick [request; timeout])
+  Lwt_main.run (Lwt.pick [request; timeout ()])
 
 let get_update_diff config =
-  let request = Client.get
-      (Uri.of_string (config.url^"/diff?token="
-                      ^config.token^"from="^(string_of_int config.version) ))
+  let open Uri in
+  let uri = Uri.of_string  ("//"^config.url) in
+  let uri = with_path uri "diff" in
+  let uri = with_scheme uri (Some "http") in
+  let uri = Uri.add_query_param' uri ("token", config.token) in
+  let uri = Uri.add_query_param' uri ("from", string_of_int config.version) in
+  let request = Client.get uri
     >>= fun (resp, body) ->
     let code = resp |> Response.status |> Code.code_of_status in
     if code = 401 then failwith("Unauthorized: Token incorrect. \n")
-    else try (
-      body |> Cohttp_lwt.Body.to_string >|= fun body ->
-      let diff = body |> from_string |> parse_version_diff_json in
-      generate_client_version_diff diff
-    ) with _ -> failwith("Server Error\n")
-  in Lwt_main.run (Lwt.pick [request; timeout])
+    else
+      try (
+        body |> Cohttp_lwt.Body.to_string >|= fun body ->
+        let diff = body |> from_string |> parse_version_diff_json in
+        print_endline "1";
+        let rtn = generate_client_version_diff diff in
+        print_endline "2";
+        rtn
+      )
+      with
+      | Not_found ->
+        print_endline "Server Error\n";
+        exit 0
+  in Lwt_main.run (Lwt.pick [request; timeout ()])
 
 let sync () =
+  print_endline "Loading [.config]...";
   let config = load_config () in
+  print_endline "Successfully loaded [.config].";
   if check_invalid_filename () then
     print_endline "Please resolve local merge conflict before syncing with the server.\n"
   else
@@ -338,7 +359,11 @@ let init url token =
   if code = 401 then
     `Empty |> Cohttp_lwt.Body.to_string >|= fun _ -> print_endline "Token entered is incorrect"
   else
+  if code <> 200 then
+    `Empty |> Cohttp_lwt.Body.to_string >|= fun _ -> print_endline "Servor Error\n"
+  else
     body |> Cohttp_lwt.Body.to_string >|= fun body ->
+    print_endline body;
     match (from_string body) with
     | `O (json) ->
       begin match List.assoc_opt "version" json with
@@ -353,7 +378,9 @@ let init url token =
               token = token;
               version = 0
             } in
-            let () = update_config config in
+            update_config config;
+            (* TODO: handle when .caml_sync already exists *)
+            Unix.mkdir ".caml_sync" 0o770;
             sync ()
         | None ->
           print_endline "The address you entered does not seem to be a valid caml_sync address"

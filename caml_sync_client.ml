@@ -187,11 +187,11 @@ let compare_working_backup () =
   let filenames_cur =
     get_all_filenames "." |> StrSet.filter
       (fun elem -> not(has_prefix_in_lst elem unwanted_strs)) in
-  let file_diff_lst0 =
+  let working_files_diff_lst =
     (* all files in working directory *)
     StrSet.fold
       (fun f_name acc -> (compare_file f_name)::acc) filenames_cur []
-  in let file_diff_lst1 =
+  in let total_files_diff_lst =
        (* all files in sync directory but not in working direcoty.
         * These files have been removed after the last update *)
        let trans_filenames_last_sync =
@@ -207,8 +207,8 @@ let compare_working_backup () =
               file_name = f_name;
               is_deleted = true;
               content_diff = calc_diff [] []
-            }::acc) deleted_files [] in
-  file_diff_lst1 @ file_diff_lst0
+            }::acc) deleted_files working_files_diff_lst in
+  List.filter (fun {content_diff} -> content_diff <> empty) total_files_diff_lst
 
 let check_both_modified_files modified_file_diffs version_diff =
   let server_diff_files = version_diff.edited_files in
@@ -256,9 +256,9 @@ let backup_working_files () =
 let remove_dir_and_files folder_name =
   try
     get_all_filenames folder_name |> StrSet.iter delete_file;
-    Unix.rmdir folder_name
+    if Sys.file_exists folder_name then
+      Unix.rmdir folder_name
   with
-  | Unix.Unix_error _
   | Not_found -> ()
 
 let generate_client_version_diff server_diff =
@@ -284,8 +284,13 @@ let generate_client_version_diff server_diff =
       if is_deleted
       then delete_file file_name
       else
-        let content = read_file file_name in
-        delete_file file_name;
+        let content = 
+          if Sys.file_exists file_name 
+          then 
+            let content' = read_file file_name in
+            delete_file file_name; 
+            content'
+          else [] in
         apply_diff content content_diff |> write_file file_name
     ) server_diff.edited_files;
   (* 6. call backup_working_files to copy everything from local
@@ -414,10 +419,10 @@ let init url token =
  *    syncs files in local directories with files in server
 *)
 let () =
-  if Array.length Sys.argv = 1 then
+   if Array.length Sys.argv = 1 then
     sync ()
-  else
-  if (Array.length Sys.argv) = 2 && (Array.get Sys.argv 1) = "init" then
+   else
+   if (Array.length Sys.argv) = 2 && (Array.get Sys.argv 1) = "init" then
     let () = print_endline "\nYou are initializing current directory as a caml_sync\
                             directory; Please indicate the address of the server you are\
                             connecting to:" in
@@ -430,7 +435,7 @@ let () =
       | exception End_of_file -> ()
       | token ->
         Lwt_main.run (init url token)
-  else
+   else
     print_endline "usage:\n\
                    caml_sync init <url> <token> ->\n\
                    \tinits the current directory as a client directory\

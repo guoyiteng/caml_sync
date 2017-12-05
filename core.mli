@@ -16,6 +16,8 @@ type version_diff = {
 exception File_existed of string
 exception File_not_found of string
 
+val empty : diff
+
 (* [calc_diff base_content new_content] returns the difference between
  * [base_content] and [new_content] *)
 val calc_diff : string list -> string list -> diff

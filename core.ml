@@ -17,6 +17,8 @@ type version_diff = {
 exception File_existed of string
 exception File_not_found of string
 
+let empty = [] 
+
 let calc_diff_old base_content new_content =
   let base_delete =
     (* create a list of Delete's corresponding to all lines in [base_content] *)
@@ -205,7 +207,7 @@ let create_dir filename =
 
 let read_json filename =
   if not (Sys.file_exists filename)
-  then raise (File_not_found "File to read does not exist.")
+  then raise (File_not_found (filename ^ ": File to read does not exist."))
   else let in_c = open_in filename in
     let json = Ezjsonm.from_channel in_c in
     close_in in_c; json
@@ -218,7 +220,7 @@ let write_json filename w_json =
 
 let read_file filename =
   if not (Sys.file_exists filename)
-  then raise (File_not_found "File to read does not exist.")
+  then raise (File_not_found (filename ^ ": File to read does not exist."))
   else
     let read_line channel =
       try Some (input_line channel) with End_of_file -> None in

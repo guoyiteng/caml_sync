@@ -26,12 +26,12 @@ let load_config () =
   try
     let dict = get_dict (from_channel (open_in ".config")) in
     try
-    {
-      client_id = get_string (List.assoc "client_id" dict);
-      url = get_string (List.assoc "url" dict);
-      token = get_string (List.assoc "token" dict);
-      version = get_int (List.assoc "version" dict);
-    }
+      {
+        client_id = get_string (List.assoc "client_id" dict);
+        url = get_string (List.assoc "url" dict);
+        token = get_string (List.assoc "token" dict);
+        version = get_int (List.assoc "version" dict);
+      }
     with
     | Not_found -> failwith("Fails to load [.config]: incorrect format")
     | _ -> failwith("Unexpected Error")
@@ -61,13 +61,13 @@ let update_config config =
 
 let get_latest_version config =
   let request = Client.get (Uri.of_string
-                (config.url^"/version/?token="^config.token)) >>=
-  fun (resp, body) ->
-  let code = resp |> Response.status |> Code.code_of_status in
-  if code = 401 then
-    failwith("Unauthorized: Token incorrect. \n")
-  else
-    failwith("unimplemented") in
+                              (config.url^"/version/?token="^config.token)) >>=
+    fun (resp, body) ->
+    let code = resp |> Response.status |> Code.code_of_status in
+    if code = 401 then
+      failwith("Unauthorized: Token incorrect. \n")
+    else
+      failwith("unimplemented") in
   Lwt_main.run (Lwt.pick [request; timeout])
 
 let generate_client_version_diff server_diff =
@@ -169,7 +169,7 @@ let has_prefix_in_lst str_to_check lst_prefices =
          let sub_str = String.sub str_to_check 0 (String.length elem) in
          if sub_str = elem then true else acc
        with | Invalid_argument _ -> acc
-) false lst_prefices
+    ) false lst_prefices
 
 (* [contains s1 s2] checks if [s2] is a substring of [s1] *)
 let contains s1 s2 =
@@ -187,15 +187,15 @@ let check_invalid_filename () =
   let filenames_cur = get_all_filenames "." in
   StrSet.fold
     (fun elem acc ->
-        if has_prefix_in_lst elem unwanted_strs then acc (* skip this file *)
-        else let extension = Filename.extension elem in
-          let open String in
-          let to_i = length elem - length extension in
-          let from_i = to_i - length "_local" in
-          try
-            let match_str = sub elem from_i to_i in
-            if  match_str = "_local" then true else acc
-          with | _ -> acc) filenames_cur false
+       if has_prefix_in_lst elem unwanted_strs then acc (* skip this file *)
+       else let extension = Filename.extension elem in
+         let open String in
+         let to_i = length elem - length extension in
+         let from_i = to_i - length "_local" in
+         try
+           let match_str = sub elem from_i to_i in
+           if  match_str = "_local" then true else acc
+         with | _ -> acc) filenames_cur false
 
 let compare_working_backup () =
   let filenames_last_sync = get_all_filenames hidden_dir in
@@ -228,7 +228,17 @@ let compare_working_backup () =
   file_diff_lst1 @ file_diff_lst0
 
 let check_both_modified_files modified_file_diffs version_diff =
-  failwith("gyt")
+  let server_diff_files = version_diff.edited_files in
+  let check_modified clt_file =
+    if List.exists (fun f -> f.file_name = clt_file.file_name) server_diff_files
+    then Some (clt_file.file_name, clt_file.is_deleted)
+    else None in
+  let modified_files_option = List.map check_modified modified_file_diffs in
+  List.fold_left (fun acc ele -> 
+      match ele with
+      | Some e -> e :: acc
+      | None -> acc
+    ) [] modified_files_option
 
 let rename_both_modified both_modified_lst =
   List.iter
@@ -242,18 +252,19 @@ let generate_client_version_diff server_diff =
    * 1. call check_both_modified_files to get both_modified_lst
    * 2. rename files in both_modified_lst
    * 3. copy files in both_modified_lst from hidden to local directory
-   * 4. apply server_diff to local directory
-   * 5. remove everything in hidden directory
+   * 4. remove everything in hidden directory   
+   * 5. apply server_diff to local directory
    * 6. call backup_working_files to copy everything from local directory to
    *    hidden directory
    * 7. remove files in both_modified_list from local_diff
    *    and return the resulting version_diff
-   *)
-  failwith("gyt")
+  *)
+  failwith "gyt"
+  
 
 (* copy a file at [from_name] to [to_name], creating additional directories
  * if [to_name] indicates writing a file deeper down than the current directory
- *)
+*)
 let copy_file from_name to_name =
   write_file to_name (read_file from_name)
 
@@ -288,21 +299,21 @@ let init url token =
     match (from_string body) with
     | `O (json) ->
       begin match List.assoc_opt "verson" json with
-      | Some v ->
-        if Sys.file_exists ".config" then
-          raise (File_existed "[.config] already exsits; it seems like the current directory
+        | Some v ->
+          if Sys.file_exists ".config" then
+            raise (File_existed "[.config] already exsits; it seems like the current directory
             has already been initialized into a caml_sync client directory\n")
-        else
-          let config = {
-            client_id = "TODO";
-            url = url;
-            token = token;
-            version = 0
-          } in
-          let () = update_config config in
-          sync ()
-      | None ->
-        print_endline "The address you entered does not seem to be a valid caml_sync address\n"
+          else
+            let config = {
+              client_id = "TODO";
+              url = url;
+              token = token;
+              version = 0
+            } in
+            let () = update_config config in
+            sync ()
+        | None ->
+          print_endline "The address you entered does not seem to be a valid caml_sync address\n"
       end
     | _ -> print_endline "The address you entered does not seem to be a valid caml_sync address\n"
 
@@ -325,10 +336,10 @@ let () =
     | url ->
       let () = print_endline ("Please enter the password for the server at "
                               ^ url ^ " to connect to the server:\n") in
-          match read_line () with
-          | exception End_of_file -> ()
-          | token ->
-            Lwt_main.run (init url token)
+      match read_line () with
+      | exception End_of_file -> ()
+      | token ->
+        Lwt_main.run (init url token)
   else
     print_endline "usage:\n\
                    caml_sync init <url> <token> ->\n\

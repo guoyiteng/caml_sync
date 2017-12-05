@@ -137,8 +137,11 @@ let compare_file filename =
  * of [str] with [prefix_new]
  * requires: [prefix_old] is a prefix of [str] *)
 let replace_prefix str prefix_old prefix_new =
-  let suffix = String.(sub str (length prefix_old) (length str - 1)) in
-  prefix_new ^ suffix
+  let open String in
+  if length str < length prefix_old
+  then failwith "prefix to be replaced does not exist in current string"
+  else let suffix = sub str (length prefix_old) (length str) in
+    prefix_new ^ suffix
 
 (* [has_prefix_in_lst str_to_check lst_prefices] checks whether [str_to_check]
  * has a prefix in [lst_prefices] *)
@@ -226,7 +229,7 @@ let rename_both_modified both_modified_lst =
     (fun (elem, to_delete) ->
        if to_delete then delete_file elem
        else let extension = Filename.extension elem in
-         let old_f_name = String.(sub elem 0 ((length elem) - (length extension))) in
+         let old_f_name = Filename.chop_extension elem in
          Sys.rename elem (old_f_name ^ "_local" ^ extension)) both_modified_lst
 
 (* copy a file at [from_name] to [to_name], creating additional directories
@@ -253,8 +256,10 @@ let backup_working_files () =
  * found, do nothing here. *)
 let remove_dir_and_files folder_name =
   try
-    get_all_filenames folder_name |> StrSet.iter delete_file
+    get_all_filenames folder_name |> StrSet.iter delete_file;
+    Unix.rmdir folder_name
   with
+  | Unix.Unix_error _
   | Not_found -> ()
 
 let generate_client_version_diff server_diff =

@@ -64,7 +64,7 @@ val rename_both_modified : (string * bool) list -> unit
  * otherwise returns [Some client_diff] where [client_diff] is the new update
  * that the current client has made
 *)
-val generate_client_version_diff : version_diff -> version_diff option
+val generate_client_version_diff : version_diff -> (string * bool) list * file_diff list
 
 (* [backup_working_files ()] copies all the files in current working
  * directory to ".caml_sync/", except those files in that contain "_local" at the

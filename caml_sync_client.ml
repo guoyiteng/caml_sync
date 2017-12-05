@@ -181,6 +181,18 @@ let contains s1 s2 =
     false
   with Exit -> true
 
+(* [contains_local filename] checks whether [filename] contains "_local"
+ * right before its extension *)
+let contains_local filename =
+  let extension = Filename.extension filename in
+    let open String in
+    let to_i = length filename - length extension in
+    let from_i = to_i - length "_local" in
+    try
+      let match_str = sub filename from_i to_i in
+      match_str = "_local"
+    with | _ -> false
+
 let check_invalid_filename () =
   let unwanted_strs =
     ["." ^ Filename.dir_sep ^ hidden_dir; "." ^ Filename.dir_sep ^ ".config"] in
@@ -188,14 +200,7 @@ let check_invalid_filename () =
   StrSet.fold
     (fun elem acc ->
        if has_prefix_in_lst elem unwanted_strs then acc (* skip this file *)
-       else let extension = Filename.extension elem in
-         let open String in
-         let to_i = length elem - length extension in
-         let from_i = to_i - length "_local" in
-         try
-           let match_str = sub elem from_i to_i in
-           if  match_str = "_local" then true else acc
-         with | _ -> acc) filenames_cur false
+       else if contains_local elem then true else acc) filenames_cur false
 
 let compare_working_backup () =
   let filenames_last_sync = get_all_filenames hidden_dir in
@@ -234,7 +239,7 @@ let check_both_modified_files modified_file_diffs version_diff =
     then Some (clt_file.file_name, clt_file.is_deleted)
     else None in
   let modified_files_option = List.map check_modified modified_file_diffs in
-  List.fold_left (fun acc ele -> 
+  List.fold_left (fun acc ele ->
       match ele with
       | Some e -> e :: acc
       | None -> acc
@@ -242,7 +247,7 @@ let check_both_modified_files modified_file_diffs version_diff =
 
 let rename_both_modified both_modified_lst =
   List.iter
-    (fun elem ->
+    (fun (elem, to_delete) ->
        let extension = Filename.extension elem in
        let old_f_name = String.(sub elem 0 ((length elem) - (length extension))) in
        Sys.rename elem (old_f_name ^ "_local" ^ extension)) both_modified_lst
@@ -252,7 +257,7 @@ let generate_client_version_diff server_diff =
    * 1. call check_both_modified_files to get both_modified_lst
    * 2. rename files in both_modified_lst
    * 3. copy files in both_modified_lst from hidden to local directory
-   * 4. remove everything in hidden directory   
+   * 4. remove everything in hidden directory
    * 5. apply server_diff to local directory
    * 6. call backup_working_files to copy everything from local directory to
    *    hidden directory
@@ -260,7 +265,7 @@ let generate_client_version_diff server_diff =
    *    and return the resulting version_diff
   *)
   failwith "gyt"
-  
+
 
 (* copy a file at [from_name] to [to_name], creating additional directories
  * if [to_name] indicates writing a file deeper down than the current directory
@@ -268,7 +273,7 @@ let generate_client_version_diff server_diff =
 let copy_file from_name to_name =
   write_file to_name (read_file from_name)
 
-let backup_working_files ignore_lst =
+let backup_working_files () =
   let unwanted_strs =
     ["." ^ Filename.dir_sep ^ hidden_dir; "." ^ Filename.dir_sep ^ ".config"] in
   let filenames_cur =

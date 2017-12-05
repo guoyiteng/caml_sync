@@ -44,15 +44,15 @@ val check_invalid_filename : unit -> bool
 val compare_working_backup : unit -> file_diff list
 
 (* [check_both_modified_files modified_file_diffs version_diff]
- * returns a list of [(filename, is_deleted)] that indicates files that are 
+ * returns a list of [(filename, is_deleted)] that indicates files that are
  * inconsistent in the following three versions: the local working version,
- * the remote server version, and the backup version in the hidden folder. If 
- * [is_deleted] is true, it means that that file is deleted in the local working 
+ * the remote server version, and the backup version in the hidden folder. If
+ * [is_deleted] is true, it means that that file is deleted in the local working
  * version compared with the backup version. *)
-val check_both_modified_files : 
+val check_both_modified_files :
   file_diff list -> version_diff -> (string * bool) list
 
-(* [rename_both_modified both_modified_list] delete or renames local files in 
+(* [rename_both_modified both_modified_list] delete or renames local files in
  * [both_modified_list] by appending "_local" to their filenames,
  * because those files have merge conflicts. [both_modified_list] is a list of
  * [(filename, is_deleted)]. The [is_deleted] indicates whether we should delete
@@ -66,10 +66,11 @@ val rename_both_modified : (string * bool) list -> unit
 *)
 val generate_client_version_diff : version_diff -> version_diff option
 
-(* [backup_working_files ignore_lst] copies all the files in current working
- * directory to ".caml_sync/", except those files in [ignore_lst]
+(* [backup_working_files ()] copies all the files in current working
+ * directory to ".caml_sync/", except those files in that contain "_local" at the
+ * end of their filename
 *)
-val backup_working_files : string list -> unit
+val backup_working_files : unit -> unit
 
 (* [init url token] creates a hidden ".config" file and stores [url] and [token]
  * in ".config". It also creates a folder ".caml_sync/" in the current directory.

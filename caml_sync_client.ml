@@ -284,11 +284,11 @@ let generate_client_version_diff server_diff =
       if is_deleted
       then delete_file file_name
       else
-        let content = 
-          if Sys.file_exists file_name 
-          then 
+        let content =
+          if Sys.file_exists file_name
+          then
             let content' = read_file file_name in
-            delete_file file_name; 
+            delete_file file_name;
             content'
           else [] in
         apply_diff content content_diff |> write_file file_name
@@ -337,10 +337,8 @@ let get_update_diff config =
       try (
         body |> Cohttp_lwt.Body.to_string >|= fun body ->
         let diff = body |> from_string |> parse_version_diff_json in
-        print_endline "1";
-        let rtn = generate_client_version_diff diff in
-        print_endline "2";
-        rtn
+        update_config {config with version=diff.cur_version};
+        generate_client_version_diff diff
       )
       with
       | Not_found ->
@@ -393,8 +391,8 @@ let init url token =
       begin match List.assoc_opt "version" json with
         | Some v ->
           if Sys.file_exists ".config" then
-            raise (File_existed "[.config] already exsits; it seems like the current directory\
-                                 has update_configalready been initialized into a caml_sync client directory")
+            print_endline "[.config] already exsits; it seems like the current directory\
+                           has update_configalready been initialized into a caml_sync client directory"
           else
             let config = {
               client_id = "TODO";

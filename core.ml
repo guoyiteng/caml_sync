@@ -30,20 +30,20 @@ let calc_diff base_content new_content =
   let open Array in
   let arr_base = of_list base_content in
   let arr_new = of_list new_content in
-  let mat = make_matrix (length arr_base) (length arr_new) 0 in
+  let mat = make_matrix (length arr_new + 1) (length arr_base + 1) 0 in
   (* initialize first row*)
   iteri (fun i ele -> mat.(0).(i) <- i) mat.(0);
   iteri (fun i ele -> mat.(i).(0) <- i) mat;
-  for i = 1 to length arr_base - 1 do
-    for j = 1 to length arr_new do
-      let from_left = 1 + mat.(i).(j-1) in
-      let from_top = 1 + mat.(i-1).(j) in
+  for r = 1 to length arr_new do
+    for c = 1 to length arr_base do
+      let from_left = 1 + mat.(r).(c-1) in
+      let from_top = 1 + mat.(r-1).(c) in
       let from_diagonal =
-        if arr_base.(j-1) = arr_new.(i-1)
-        then mat.(i-1).(j-1)
+        if arr_new.(r-1) = arr_base.(c-1)
+        then mat.(r-1).(c-1)
         else max_int in
       let min_dist = from_left |> min from_top |> min from_diagonal in
-      mat.(i).(j) <- min_dist
+      mat.(r).(c) <- min_dist
     done
   done;
   let rec backtrack r c acc =
@@ -60,7 +60,7 @@ let calc_diff base_content new_content =
       let from_left = mat.(r).(c-1) + 1 in
       let from_top = mat.(r-1).(c) + 1 in
       let from_diagonal = mat.(r-1).(c-1) in
-      if from_diagonal = cur
+      if from_diagonal = cur && arr_new.(r-1) = arr_base.(c-1)
       then backtrack (r-1) (c-1) acc
       else if from_left = cur
       then backtrack r (c-1) ((Delete c)::acc)

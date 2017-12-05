@@ -46,7 +46,55 @@ let calc_diff base_content new_content =
       mat.(i).(j) <- min_dist
     done
   done;
-  
+  let rec backtrack r c acc =
+    let cur = mat.(r).(c) in
+    let from_left = mat.(r).(c-1) + 1 in
+    let from_top = mat.(r-1).(c) + 1 in
+    let from_diagonal = mat.(r-1).(c-1) in
+    if from_diagonal = cur
+    then backtrack (r-1) (c-1) acc
+    else
+      begin
+        if from_left = cur
+        then backtrack r (c-1) ((Delete c)::acc)
+        else
+          begin
+            if from_top = cur
+            then backtrack (r-1) c ((Insert (c, [arr_new.(r-1)]))::acc)
+            else failwith "impossible"
+          end
+      end in
+  let lst_diffs = backtrack (length arr_new) (length arr_base) [] in
+  let new_lst_diffs =
+    List.fold_left
+      (fun acc op ->
+         match acc with
+         | [] -> [op]
+         | h::t -> begin
+             match h with
+             | Delete _ -> op::acc
+             | Insert (line_prev, ins_lst_prev) ->
+               begin
+                 match op with
+                 | Delete _ -> op::acc
+                 | Insert (line_cur, ins_lst_cur) ->
+                   if line_cur = line_prev + (List.length ins_lst_prev)
+                   then
+                     assert (List.length ins_lst_cur = 1);
+                     let new_ins_lst =
+                       (List.hd (ins_lst_prev)) :: ins_lst_cur in
+                     (Insert (line_prev, new_ins_lst))::t
+                  else op::acc
+               end
+         end
+) [] lst_diffs in
+if List.length new_lst_diffs = 0 then new_lst_diffs else
+  begin
+    match (List.hd new_lst_diffs) with
+    | Delete _ -> new_lst_diffs
+    | Insert (line, ins_lst) -> (Insert (line, List.rev ins_lst)::(List.tl new_lst_diffs))
+  end
+
 
 let apply_diff base_content diff_content =
   (* go over every element in base_content, and compare the line number with

@@ -17,7 +17,7 @@ type version_diff = {
 exception File_existed of string
 exception File_not_found of string
 
-let calc_diff base_content new_content =
+let calc_diff_old base_content new_content =
   let base_delete =
     (* create a list of Delete's corresponding to all lines in [base_content] *)
     let rec add_delete from_index acc =
@@ -25,6 +25,28 @@ let calc_diff base_content new_content =
       else add_delete (from_index - 1) ((Delete from_index)::acc)
     in add_delete (List.length base_content) [] in
   (Insert (0, new_content))::base_delete
+
+let calc_diff base_content new_content =
+  let open Array in
+  let arr_base = of_list base_content in
+  let arr_new = of_list new_content in
+  let mat = make_matrix (length arr_base) (length arr_new) 0 in
+  (* initialize first row*)
+  iteri (fun i ele -> mat.(0).(i) <- i) mat.(0);
+  iteri (fun i ele -> mat.(i).(0) <- i) mat;
+  for i = 1 to length arr_base - 1 do
+    for j = 1 to length arr_new do
+      let from_left = 1 + mat.(i).(j-1) in
+      let from_top = 1 + mat.(i-1).(j) in
+      let from_diagonal =
+        if arr_base.(j-1) = arr_new.(i-1)
+        then mat.(i-1).(j-1)
+        else max_int in
+      let min_dist = from_left |> min from_top |> min from_diagonal in
+      mat.(i).(j) <- min_dist
+    done
+  done;
+  
 
 let apply_diff base_content diff_content =
   (* go over every element in base_content, and compare the line number with

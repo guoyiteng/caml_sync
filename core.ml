@@ -1,17 +1,28 @@
-type op = Delete of int | Insert of (int * string list)
+module type Diff_Core = sig
+  (*  *)
+  type op = Delete of int | Insert of (int * string list)
+  (*  *)
+  type t = op list
+  (*  *)
+  val empty : t
+  (*  *)
+  val calc_diff : string list -> string list -> t
+end
 
 module type Diff = sig
+  type op = Delete of int | Insert of (int * string list)
   type t
   val empty : t
   val calc_diff : string list -> string list -> t
   val apply_diff : string list -> t -> string list
+  val build_diff_json : t -> Ezjsonm.value
+  val parse_diff_json : Ezjsonm.value -> t
 end
 
-module Naive_Diff : Diff = struct
+module Naive_Diff : Diff_Core = struct
+  type op = Delete of int | Insert of (int * string list)
   type t = op list
-
   let empty = []
-
   let calc_diff base_content new_content =
     let base_delete =
       (* create a list of Delete's corresponding to all lines in [base_content] *)
@@ -20,14 +31,12 @@ module Naive_Diff : Diff = struct
         else add_delete (from_index - 1) ((Delete from_index)::acc)
       in add_delete (List.length base_content) [] in
     (Insert (0, new_content))::base_delete
-
   let apply_diff = failwith "unimplemented"
-
 end
 
-module DP_Diff : Diff = struct
+module DP_Diff : Diff_Core = struct
+  type op = Delete of int | Insert of (int * string list)
   type t = op list
-
   let empty = []
 
   let calc_diff base_content new_content =
@@ -83,7 +92,19 @@ module DP_Diff : Diff = struct
 
 end
 
-module Make_Diff ( Diff_Impl : Diff) : Diff = struct
+let extract_string json key = Ezjsonm.(get_string (find json [key]))
+
+let extract_int json key = Ezjsonm.(get_int (find json [key]))
+
+(* [extract_bool json key] gets the key-value pair in [json] keyed on [key],
+  * and returns the corresponding bool value *)
+let extract_bool json key = Ezjsonm.(get_bool (find json [key]))
+
+(* [extract_strlist json key] gets the key-value pair in [json] keyed on [key],
+  * and returns the corresponding string list value *)
+let extract_strlist json key = Ezjsonm.(get_strings (find json [key]))
+
+module Make_Diff ( Diff_Impl : Diff_Core) : Diff = struct
   include Diff_Impl
 
   let apply_diff base_content diff_content =
@@ -124,10 +145,42 @@ module Make_Diff ( Diff_Impl : Diff) : Diff = struct
             else failwith "should not happen in update_diff"
         end
     in List.rev (match_op 1 diff_content [])
+
+    let build_diff_json diff_obj =
+      let open Ezjsonm in
+      let to_json_strlist str_lst =
+        list (fun str -> string str) str_lst in
+      (* list of dicts *)
+      let open Diff_Impl in
+      list (fun op ->
+          match op with
+          | Delete index ->
+            dict [("op", string "del");
+                  ("line", int index);
+                  ("content", to_json_strlist [""])]
+          | Insert (index, str_lst) ->
+            dict [("op", string "ins");
+                  ("line", int index);
+                  ("content", to_json_strlist str_lst)]
+        ) diff_obj
+    
+    let parse_diff_json diff_json =
+      let open Ezjsonm in
+      get_list
+        (fun elem ->
+           let op = extract_string elem "op" in
+           let line_index = extract_int elem "line" in
+           let content = extract_strlist elem "content" in
+           let open Diff_Impl in  
+           if op = "del" then Delete line_index
+           else if op = "ins" then Insert (line_index, content)
+           else failwith "Error when parsing json"
+        ) diff_json    
 end
 
 module Diff_Impl = Make_Diff (DP_Diff)
 
+type op = Diff_Impl.op
 type diff = Diff_Impl.t
 
 type file_diff = {
@@ -145,47 +198,6 @@ type version_diff = {
 exception File_existed of string
 exception File_not_found of string
 
-let extract_string json key = Ezjsonm.(get_string (find json [key]))
-
-let extract_int json key = Ezjsonm.(get_int (find json [key]))
-
-(* [extract_bool json key] gets the key-value pair in [json] keyed on [key],
-  * and returns the corresponding bool value *)
-let extract_bool json key = Ezjsonm.(get_bool (find json [key]))
-
-(* [extract_strlist json key] gets the key-value pair in [json] keyed on [key],
-  * and returns the corresponding string list value *)
-let extract_strlist json key = Ezjsonm.(get_strings (find json [key]))
-
-let build_diff_json diff_obj =
-  let open Ezjsonm in
-  let to_json_strlist str_lst =
-    list (fun str -> string str) str_lst in
-  (* list of dicts *)
-  list (fun op ->
-      match op with
-      | Delete index ->
-        dict [("op", string "del");
-              ("line", int index);
-              ("content", to_json_strlist [""])]
-      | Insert (index, str_lst) ->
-        dict [("op", string "ins");
-              ("line", int index);
-              ("content", to_json_strlist str_lst)]
-    ) diff_obj
-
-let parse_diff_json diff_json =
-  let open Ezjsonm in
-  get_list
-    (fun elem ->
-       let op = extract_string elem "op" in
-       let line_index = extract_int elem "line" in
-       let content = extract_strlist elem "content" in
-       if op = "del" then Delete line_index
-       else if op = "ins" then Insert (line_index, content)
-       else failwith "Error when parsing json"
-    ) diff_json
-
 let build_version_diff_json v_diff =
   let open Ezjsonm in
   dict [
@@ -195,7 +207,7 @@ let build_version_diff_json v_diff =
       fun f_diff -> dict [
           "file_name", (string f_diff.file_name);
           "is_deleted", (bool f_diff.is_deleted);
-          "content_diff", (build_diff_json f_diff.content_diff);
+          "content_diff", (Diff_Impl.build_diff_json f_diff.content_diff);
         ]
     ) v_diff.edited_files;
   ]
@@ -207,7 +219,7 @@ let parse_file_diff_json f_json =
   {
     file_name = extract_string f_json "file_name";
     is_deleted = extract_bool f_json "is_deleted";
-    content_diff = parse_diff_json (find f_json ["content_diff"])
+    content_diff = Diff_Impl.parse_diff_json (find f_json ["content_diff"])
   }
 
 let parse_version_diff_json v_json =

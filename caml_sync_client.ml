@@ -100,7 +100,7 @@ let compare_file filename =
   in {
     file_name = filename;
     is_deleted = false;
-    content_diff = calc_diff old_file_content cur_file_content
+    content_diff = Diff_Impl.calc_diff old_file_content cur_file_content
   }
 
 (* [replace_prefix str prefix_old prefix_new] replaces the prefix [prefix_old]
@@ -176,9 +176,9 @@ let compare_working_backup () =
             {
               file_name = f_name;
               is_deleted = true;
-              content_diff = calc_diff [] []
+              content_diff = Diff_Impl.calc_diff [] []
             }::acc) deleted_files working_files_diff_lst in
-  List.filter (fun {content_diff} -> content_diff <> empty) total_files_diff_lst
+  List.filter (fun {content_diff} -> content_diff <> Diff_Impl.empty) total_files_diff_lst
 
 let check_both_modified_files modified_file_diffs version_diff =
   let server_diff_files = version_diff.edited_files in
@@ -261,7 +261,7 @@ let generate_client_version_diff server_diff =
             delete_file file_name;
             content'
           else [] in
-        apply_diff content content_diff |> write_file file_name
+          Diff_Impl.apply_diff content content_diff |> write_file file_name
     ) server_diff.edited_files;
   (* 6. call backup_working_files to copy everything from local
    * directory to hidden directory. *)

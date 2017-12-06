@@ -4,13 +4,17 @@ module type Diff = sig
    * [Insert (i, content)] indicates that [content] needs to be added
    * right after the [i]'th line of the original file *)
   type op = Delete of int | Insert of (int * string list)
+
   (* represents the difference between contents*)
   type t
+
   (* [empty] represents no difference between contents*)
   val empty : t
+
   (* [calc_diff base_content new_content] returns the difference between
    * [base_content] and [new_content] *)
   val calc_diff : string list -> string list -> t
+
   (* [apply_diff base_content diff_content] returns the result
    * after applying the changes in [diff_content] to [base_content] *)
   val apply_diff : string list -> t -> string list

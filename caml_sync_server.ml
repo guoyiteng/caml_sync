@@ -236,7 +236,11 @@ let main () =
     let token = Sys.argv.(2) in
     init token
   else if Array.length Sys.argv = 2 && Sys.argv.(1) = "clean"
-  then raise Unimplemented 
+  then 
+  let dir = "." in
+  let d_handle =
+  try Unix.opendir dir  with | _ -> raise Not_found;
+  in search_dir d_handle (List.cons) [] [] dir [".json"; ".diff"] |> List.iter delete_file
   else
     print_endline "Invalid arguments.
     usage: ./caml_sync_server.native [init <token>]"

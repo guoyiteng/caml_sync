@@ -31,7 +31,6 @@ module Naive_Diff : Diff_Core = struct
         else add_delete (from_index - 1) ((Delete from_index)::acc)
       in add_delete (List.length base_content) [] in
     (Insert (0, new_content))::base_delete
-  let apply_diff = failwith "unimplemented"
 end
 
 module DP_Diff : Diff_Core = struct
@@ -87,8 +86,6 @@ module DP_Diff : Diff_Core = struct
         else failwith "impossible"
     in
     backtrack (length arr_new) (length arr_base) []
-
-  let apply_diff = failwith "unimplemented"
 
 end
 
@@ -163,7 +160,7 @@ module Make_Diff ( Diff_Impl : Diff_Core) : Diff = struct
                   ("line", int index);
                   ("content", to_json_strlist str_lst)]
         ) diff_obj
-    
+
     let parse_diff_json diff_json =
       let open Ezjsonm in
       get_list
@@ -171,11 +168,11 @@ module Make_Diff ( Diff_Impl : Diff_Core) : Diff = struct
            let op = extract_string elem "op" in
            let line_index = extract_int elem "line" in
            let content = extract_strlist elem "content" in
-           let open Diff_Impl in  
+           let open Diff_Impl in
            if op = "del" then Delete line_index
            else if op = "ins" then Insert (line_index, content)
            else failwith "Error when parsing json"
-        ) diff_json    
+        ) diff_json
 end
 
 module Diff_Impl = Make_Diff (DP_Diff)

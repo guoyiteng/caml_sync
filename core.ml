@@ -1,11 +1,7 @@
 module type Diff_Core = sig
-  (*  *)
   type op = Delete of int | Insert of (int * string list)
-  (*  *)
   type t = op list
-  (*  *)
   val empty : t
-  (*  *)
   val calc_diff : string list -> string list -> t
 end
 

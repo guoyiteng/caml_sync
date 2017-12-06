@@ -8,8 +8,10 @@ module type Diff_Calc = sig
   val apply_diff : string list -> diff -> string list
 end
 
-module Diff_Init = struct
+module Diff_Init : Diff_Calc = struct
   let empty = []
+
+  let calc_diff = failwith "unimplemented"
 
   let apply_diff base_content diff_content =
     (* go over every element in base_content, and compare the line number with
@@ -51,8 +53,8 @@ module Diff_Init = struct
     in List.rev (match_op 1 diff_content [])
 end
 
-module Diff_Trivial : Diff_Calc = struct
-  include Diff_Init
+module Make_Diff_Trivial ( Diff_Impl : Diff_Calc ) : Diff_Calc = struct
+  include Diff_Impl
   let calc_diff base_content new_content =
     let base_delete =
       (* create a list of Delete's corresponding to all lines in [base_content] *)
@@ -63,8 +65,8 @@ module Diff_Trivial : Diff_Calc = struct
     (Insert (0, new_content))::base_delete
 end
 
-module Diff : Diff_Calc = struct
-  include Diff_Init
+module Make_Diff ( Diff_Impl : Diff_Calc ) : Diff_Calc = struct
+  include Diff_Impl
   let calc_diff base_content new_content =
     (* based on dynamic programming *)
     let open Array in
@@ -114,6 +116,8 @@ module Diff : Diff_Calc = struct
     in
     backtrack (length arr_new) (length arr_base) []
 end
+
+module Diff = Make_Diff (Diff_Init)
 
 type file_diff = {
   file_name: string;

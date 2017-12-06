@@ -66,11 +66,11 @@ let calc_file_diffs_between_states state1 state2 =
           {
             file_name = cur_file;
             is_deleted = true;
-            content_diff = calc_diff [] []
+            content_diff = Diff.calc_diff [] []
           }::acc
         else
           let new_content = find cur_file state2 in
-          let content_diff = calc_diff cur_content new_content in
+          let content_diff = Diff.calc_diff cur_content new_content in
           {
             file_name = cur_file;
             is_deleted = false;
@@ -85,7 +85,7 @@ let calc_file_diffs_between_states state1 state2 =
           {
             file_name = cur_file;
             is_deleted = false;
-            content_diff = calc_diff [] cur_content
+            content_diff = Diff.calc_diff [] cur_content
           }::acc
         else acc
     ) state2 [] in
@@ -103,14 +103,14 @@ let apply_version_diff_to_state version_diff state =
            if (to_delete) then failwith "Invalid version diff"
            else
              (* create new file *)
-             let new_content = apply_diff [] content_diff in
+             let new_content = Diff.apply_diff [] content_diff in
              add cur_file new_content acc
          end
        else
          begin
            if to_delete then remove cur_file acc
            else let old_content = find cur_file acc in
-             let new_content = apply_diff old_content content_diff in
+             let new_content = Diff.apply_diff old_content content_diff in
              add cur_file new_content acc
          end
     ) state (version_diff.edited_files)
@@ -236,7 +236,7 @@ let main () =
     let token = Sys.argv.(2) in
     init token
   else if Array.length Sys.argv = 2 && Sys.argv.(1) = "clean"
-  then 
+  then
   let dir = "." in
   let d_handle =
   try Unix.opendir dir  with | _ -> raise Not_found;

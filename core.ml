@@ -1,15 +1,14 @@
+type op = Delete of int | Insert of (int * string list)
+
+type diff = op list
+
 module type Diff_Calc = sig
-  type diff
   val empty : diff
   val calc_diff : string list -> string list -> diff
   val apply_diff : string list -> diff -> string list
 end
 
 module Diff_Init = struct
-  type op = Delete of int | Insert of (int * string list)
-
-  type diff = op list
-
   let empty = []
 
   let apply_diff base_content diff_content =
@@ -119,7 +118,7 @@ end
 type file_diff = {
   file_name: string;
   is_deleted: bool;
-  content_diff: Diff.diff;
+  content_diff: diff;
 }
 
 type version_diff = {

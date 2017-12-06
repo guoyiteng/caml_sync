@@ -1,6 +1,7 @@
+(* [diff] represents an ocaml diff object between contents *)
+type diff
+
 module type Diff_Calc = sig
-  (* [diff] represents an ocaml diff object between contents *)
-  type diff
   (* represents no difference between contents*)
   val empty : diff
   (* [calc_diff base_content new_content] returns the difference between
@@ -16,7 +17,7 @@ module Diff : Diff_Calc
 type file_diff = {
   file_name: string;
   is_deleted: bool;
-  content_diff: Diff.diff;
+  content_diff: diff;
 }
 
 type version_diff = {
@@ -38,11 +39,11 @@ val extract_int: Ezjsonm.value -> string -> int
 
 (* [build_diff_json diff_obj] returns the diff json representing
  * the ocaml diff object [diff_obj] *)
-val build_diff_json : Diff.diff -> Ezjsonm.value
+val build_diff_json : diff -> Ezjsonm.value
 
 (* [parse_diff_json diff_json] returns an ocaml diff object
  * represented by [diff_json] *)
-val parse_diff_json : Ezjsonm.value -> Diff.diff
+val parse_diff_json : Ezjsonm.value -> diff
 
 (* [build_version_diff_json v_diff] returns a json representing
  * the ocaml version_diff object [version_diff] *)

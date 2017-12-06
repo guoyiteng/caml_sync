@@ -68,7 +68,7 @@ end
 module Make_Diff ( Diff_Impl : Diff_Calc ) : Diff_Calc = struct
   include Diff_Impl
   let calc_diff base_content new_content =
-    (* based on dynamic programming *)
+    (* better implementation based on dynamic programming *)
     let open Array in
     let arr_base = of_list base_content in
     let arr_new = of_list new_content in
@@ -133,8 +133,6 @@ type version_diff = {
 
 exception File_existed of string
 exception File_not_found of string
-
-open Diff_Init
 
 let extract_string json key = Ezjsonm.(get_string (find json [key]))
 
@@ -273,6 +271,7 @@ let rec recursively_rm_dir rev_lst =
       Unix.Unix_error (Unix.ENOTEMPTY, "rmdir", _) -> ()
 
 let delete_file filename =
+  (* rev_lst_split contains the separate path fields *)
   let rev_lst_split = String.split_on_char '/' filename |> List.rev |> List.tl in
   try Sys.remove filename; recursively_rm_dir rev_lst_split
   with Sys_error _ -> raise (File_not_found "Cannot remove file.")

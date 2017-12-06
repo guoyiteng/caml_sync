@@ -420,14 +420,17 @@ let init url token =
 let () =
    if Array.length Sys.argv = 1 then
     sync ()
-   else
-   if (Array.get Sys.argv 1) = "init" then
-     if (Array.length Sys.argv) = 4 then
-       Lwt_main.run (init (Array.get Sys.argv 2) (Array.get Sys.argv 3))
-     else Lwt_main.run (init "127.0.0.1:8080" "default")
-   else
-    print_endline "usage:\n\
-                   caml_sync init <url> <token> ->\n\
-                   \tinits the current directory as a client directory\
-                   caml_sync ->\n\
-                   \tsyncs files in local directories with files in server"
+   else match Array.get Sys.argv 1 with
+     | "init" ->
+       if (Array.length Sys.argv) = 4 then
+         Lwt_main.run (init (Array.get Sys.argv 2) (Array.get Sys.argv 3))
+       else Lwt_main.run (init "127.0.0.1:8080" "default")
+     | "clean" ->
+       remove_dir_and_files ".caml_sync";
+       Sys.remove ".config"
+     | _ ->
+       print_endline "usage:\n\
+                      caml_sync init <url> <token> ->\n\
+                      \tinits the current directory as a client directory\
+                      caml_sync ->\n\
+                      \tsyncs files in local directories with files in server"

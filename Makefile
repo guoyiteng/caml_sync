@@ -1,7 +1,11 @@
 .PHONY: server client
 all: server client
 install:
-	$(INSTALL) _build/caml_sync_client.native $(bindir)/camlsync
+	ln -s `pwd`/_build/caml_sync_client.native /usr/local/bin/camlsync
+	ln -s `pwd`/_build/caml_sync_server.native /usr/local/bin/camlsyncserver
+uninstall:
+	unlink /usr/local/bin/camlsync
+	unlink /usr/local/bin/camlsyncserver
 server:
 	ocamlbuild -use-ocamlfind caml_sync_server.native
 	rm -f server/caml_sync_server.native

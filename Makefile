@@ -1,4 +1,5 @@
 .PHONY: server client
+all: server client
 server:
 	ocamlbuild -use-ocamlfind caml_sync_server.native
 	rm -f server/caml_sync_server.native
@@ -7,7 +8,6 @@ client:
 	ocamlbuild -use-ocamlfind caml_sync_client.native
 	rm -f client/caml_sync_client.native
 	mv caml_sync_client.native client/caml_sync_client.native
-compile: server client
 server_template:
 	ocamlbuild -use-ocamlfind server_template.native && ./server_template.native
 sync:

@@ -60,39 +60,12 @@ let update_config config =
   | _ ->
     raise (File_not_found ".config")
 
-(* [search_dir dir_handle acc_file acc_dir dir_name valid_exts]
- * recursively searches for all the files in the directory
- * represented by [dir_handle] or its subdirectories,
- * and returns a set of all such files of approved suffixes in [valid_exts]
- * requires: [dir_handle] is a valid directory handle returned by Unix.opendir. *)
-let rec search_dir dir_handle acc_file acc_dir dir_name valid_exts =
-  (* similar to BFS *)
-  match Unix.readdir dir_handle with
-  | exception End_of_file ->
-    let () = Unix.closedir dir_handle in
-    (* go into subdirectories *)
-    List.fold_left
-      (fun acc a_dir ->
-         let sub_d_handle = Unix.opendir a_dir in
-         search_dir sub_d_handle acc [] a_dir valid_exts
-      ) acc_file acc_dir
-  | p_name ->
-    let path = dir_name ^ Filename.dir_sep ^ p_name in
-    if Sys.is_directory path && p_name <> "." && p_name <> ".." then
-      (* save information about this subdirectory in acc_dir, to be processed
-       * after having seen all files in the current directory *)
-      search_dir dir_handle acc_file (path::acc_dir) dir_name valid_exts
-    else if List.mem (Filename.extension p_name) valid_exts then
-      let new_fileset = StrSet.add path acc_file in
-      search_dir dir_handle new_fileset acc_dir dir_name valid_exts
-    else search_dir dir_handle acc_file acc_dir dir_name valid_exts
-
 (* [get_all_filenames dir] returns a set of all the filenames
  * in directory [dir] or its subdirectories that are of approved suffixes *)
 let get_all_filenames dir =
   let d_handle =
     try Unix.opendir dir  with | _ -> raise Not_found
-  in search_dir d_handle StrSet.empty [] dir valid_extensions
+  in search_dir d_handle StrSet.add StrSet.empty [] dir valid_extensions
 
 let post_local_diff config version_diff =
   let open Uri in
@@ -268,10 +241,10 @@ let generate_client_version_diff server_diff =
   rename_both_modified both_modified_lst;
   (* 3. copy files in both_modified_lst from hidden to local
    * directory. *)
-  let from_file_names =
-    both_modified_lst |> List.map (fun (filename, is_deleted) -> filename) in
   let to_file_names =
-    from_file_names |> List.map
+    both_modified_lst |> List.map (fun (filename, is_deleted) -> filename) in
+  let from_file_names =
+    to_file_names |> List.map
       (fun filename -> replace_prefix filename "." hidden_dir) in
   copy_files from_file_names to_file_names;
   (* 4. remove everything in hidden directory. *)

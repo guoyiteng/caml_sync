@@ -11,6 +11,8 @@ end
 module Diff_Init : Diff_Calc = struct
   let empty = []
 
+ (* there are multiple ways of implementing this,
+  * to be implemented later *)
   let calc_diff = failwith "unimplemented"
 
   let apply_diff base_content diff_content =

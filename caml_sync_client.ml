@@ -379,10 +379,12 @@ let init url token =
   let code = resp |> Response.status |> Code.code_of_status in
   (* First checks if pass token test by the response status code *)
   if code = 401 then
-    `Empty |> Cohttp_lwt.Body.to_string >|= fun _ -> print_endline "Token entered is incorrect"
+    `Empty |> Cohttp_lwt.Body.to_string >|= fun _ -> print_endline "Token incorrect"
   else
   if code <> 200 then
-    `Empty |> Cohttp_lwt.Body.to_string >|= fun _ -> print_endline "Servor Error\n"
+    `Empty |> Cohttp_lwt.Body.to_string >|= fun _ ->
+    print_endline "Servor Error\n";
+    print_endline (string_of_int code)
   else
     body |> Cohttp_lwt.Body.to_string >|= fun body ->
     print_endline body;
@@ -419,19 +421,10 @@ let () =
    if Array.length Sys.argv = 1 then
     sync ()
    else
-   if (Array.length Sys.argv) = 2 && (Array.get Sys.argv 1) = "init" then
-    let () = print_endline "\nYou are initializing current directory as a caml_sync\
-                            directory; Please indicate the address of the server you are\
-                            connecting to:" in
-    match read_line () with
-    | exception End_of_file -> ()
-    | url ->
-      let () = print_endline ("Please enter the password for the server at "
-                              ^ url ^ " to connect to the server:") in
-      match read_line () with
-      | exception End_of_file -> ()
-      | token ->
-        Lwt_main.run (init url token)
+   if (Array.get Sys.argv 1) = "init" then
+     if (Array.length Sys.argv) = 4 then
+       Lwt_main.run (init (Array.get Sys.argv 2) (Array.get Sys.argv 3))
+     else Lwt_main.run (init "127.0.0.1:8080" "default")
    else
     print_endline "usage:\n\
                    caml_sync init <url> <token> ->\n\

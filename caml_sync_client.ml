@@ -409,16 +409,17 @@ let () =
          | Sys_error e -> ()
        end
      | "checkout" ->
-       let dir = "." in
        let curr_handle =
-         try Unix.opendir dir with | _ -> raise Not_found
+         try Unix.opendir "." with | _ -> raise Not_found
        in
-       search_dir curr_handle (List.cons) [] [] dir valid_extensions |> List.iter delete_file;
+       search_dir curr_handle (List.cons) [] [] "." valid_extensions
+       |> List.filter (fun file -> not (has_prefix_in_lst file unwanted_strs) )
+       |> List.iter delete_file;
        let hidden_handle =
          try Unix.opendir hidden_dir with | _ -> raise Not_found
        in
-       let from_files = search_dir hidden_handle (List.cons) [] [] dir valid_extensions in
-       let to_files = List.map (fun file -> replace_prefix file "." hidden_dir) from_files in
+       let from_files = search_dir hidden_handle (List.cons) [] [] hidden_dir valid_extensions in
+       let to_files = List.map (fun file -> replace_prefix file hidden_dir ".") from_files in
        copy_files from_files to_files
      | _ ->
        print_endline "usage:\n\

@@ -1,5 +1,7 @@
 .PHONY: server client
 all: server client
+install:
+	$(INSTALL) _build/caml_sync_client.native $(bindir)/camlsync
 server:
 	ocamlbuild -use-ocamlfind caml_sync_server.native
 	rm -f server/caml_sync_server.native
@@ -41,7 +43,7 @@ clean:
 	rm -rf client2
 	mkdir client
 	mkdir client2
-install:
+dependencies:
 	opam update
 	opam install opium ezjsonm cohttp
 test:

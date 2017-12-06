@@ -1,23 +1,28 @@
-module type Diff_Calc = sig
-
+module type Diff = sig
   type op = Delete of int | Insert of (int * string list)
-
   type t
   (* represents no difference between contents*)
-  val empty : diff
+  val empty : t
   (* [calc_diff base_content new_content] returns the difference between
    * [base_content] and [new_content] *)
-  val calc_diff : string list -> string list -> diff
+  val calc_diff : string list -> string list -> t
   (* [apply_diff base_content diff_content] returns the result
    * after applying the changes in [diff_content] to [base_content] *)
-  val apply_diff : string list -> diff -> string list
+  val apply_diff : string list -> t -> string list
+
+  (* [build_diff_json diff_obj] returns the diff json representing
+   * the ocaml diff object [diff_obj] *)
+  val build_diff_json : t -> Ezjsonm.value
+
+  (* [parse_diff_json diff_json] returns an ocaml diff object
+   * represented by [diff_json] *)
+  val parse_diff_json : Ezjsonm.value -> t
 end
 
-module Diff : Diff_Calc
+module Diff_Impl : Diff
 
 (* [diff] represents an ocaml diff object between contents *)
-type diff
-type op
+type diff = Diff_Impl.t
 
 type file_diff = {
   file_name: string;
@@ -41,14 +46,6 @@ val extract_string: Ezjsonm.value -> string -> string
 (* [extract_int json key] gets the key-value pair in [json] keyed on [key],
   * and returns the corresponding int value *)
 val extract_int: Ezjsonm.value -> string -> int
-
-(* [build_diff_json diff_obj] returns the diff json representing
- * the ocaml diff object [diff_obj] *)
-val build_diff_json : diff -> Ezjsonm.value
-
-(* [parse_diff_json diff_json] returns an ocaml diff object
- * represented by [diff_json] *)
-val parse_diff_json : Ezjsonm.value -> diff
 
 (* [build_version_diff_json v_diff] returns a json representing
  * the ocaml version_diff object [version_diff] *)

@@ -1,11 +1,125 @@
-type op = Delete of int | Insert of (int * string list)
+module type Diff_Calc = sig
+  type diff
+  val empty : diff
+  val calc_diff : string list -> string list -> diff
+  val apply_diff : string list -> diff -> string list
+end
 
-type diff = op list
+module Diff_Init = struct
+  type op = Delete of int | Insert of (int * string list)
+
+  type diff = op list
+
+  let empty = []
+
+  let apply_diff base_content diff_content =
+    (* go over every element in base_content, and compare the line number with
+     * information in diff_content, in order to see whether the current line
+     * should be kept, deleted, or followed by some new lines. *)
+    let rec match_op cur_index diff_lst acc =
+      (* new content willl be saved in acc, in reverse order *)
+      match diff_lst with
+      | [] ->
+        if cur_index > List.length base_content then acc
+        else let cur_line = List.nth base_content (cur_index-1) in
+          match_op (cur_index+1) diff_lst (cur_line::acc)
+      | h::t ->
+        begin match h with
+          | Delete ind ->
+            if cur_index = ind then
+              (* current line is deleted.
+               * move on to the next line. Do not add anything to acc *)
+              match_op (cur_index+1) t acc
+            else if cur_index < ind then
+              (* copy current line from base_content to acc *)
+              let cur_line = List.nth base_content (cur_index-1) in
+              match_op (cur_index+1) diff_lst (cur_line::acc)
+            else failwith "should not happen in update_diff"
+          | Insert (ind, str_lst) ->
+            if ind = 0 then
+              match_op cur_index t (List.rev str_lst)
+            else if cur_index < ind then
+              (* copy current line from base_content to acc *)
+              let cur_line = List.nth base_content (cur_index-1) in
+              match_op (cur_index+1) diff_lst (cur_line::acc)
+            else if cur_index = ind then
+              (* insert lines after current line *)
+              let cur_line = List.nth base_content (cur_index-1) in
+              let new_lst = List.rev (cur_line::str_lst) in
+              match_op (cur_index+1) t (new_lst @ acc)
+            else failwith "should not happen in update_diff"
+        end
+    in List.rev (match_op 1 diff_content [])
+end
+
+module Diff_Trivial : Diff_Calc = struct
+  include Diff_Init
+  let calc_diff base_content new_content =
+    let base_delete =
+      (* create a list of Delete's corresponding to all lines in [base_content] *)
+      let rec add_delete from_index acc =
+        if from_index = 0 then acc
+        else add_delete (from_index - 1) ((Delete from_index)::acc)
+      in add_delete (List.length base_content) [] in
+    (Insert (0, new_content))::base_delete
+end
+
+module Diff : Diff_Calc = struct
+  include Diff_Init
+  let calc_diff base_content new_content =
+    (* based on dynamic programming *)
+    let open Array in
+    let arr_base = of_list base_content in
+    let arr_new = of_list new_content in
+    let mat = make_matrix (length arr_new + 1) (length arr_base + 1) 0 in
+    (* initialize first row*)
+    iteri (fun i ele -> mat.(0).(i) <- i) mat.(0);
+    iteri (fun i ele -> mat.(i).(0) <- i) mat;
+    for r = 1 to length arr_new do
+      for c = 1 to length arr_base do
+        let from_left = 1 + mat.(r).(c-1) in
+        let from_top = 1 + mat.(r-1).(c) in
+        let from_diagonal =
+          if arr_new.(r-1) = arr_base.(c-1)
+          then mat.(r-1).(c-1)
+          else max_int in
+        let min_dist = from_left |> min from_top |> min from_diagonal in
+        mat.(r).(c) <- min_dist
+      done
+    done;
+    let rec backtrack r c acc =
+      if r = 0 then
+        let rec prepend_delete counter acc' =
+          if counter = 0 then acc'
+          else prepend_delete (counter - 1) ((Delete counter) :: acc') in
+        prepend_delete c acc
+      else if c = 0 then
+        let content = sub arr_new 0 r |> to_list in
+        (Insert (0, content)) :: acc
+      else
+        let cur = mat.(r).(c) in
+        let from_left = mat.(r).(c-1) + 1 in
+        let from_top = mat.(r-1).(c) + 1 in
+        let from_diagonal = mat.(r-1).(c-1) in
+        if from_diagonal = cur && arr_new.(r-1) = arr_base.(c-1)
+        then backtrack (r-1) (c-1) acc
+        else if from_left = cur
+        then backtrack r (c-1) ((Delete c)::acc)
+        else if from_top = cur
+        then match acc with
+          | (Insert (line, content_lst)) :: t when c = line ->
+            let cur_content = arr_new.(r-1) in
+            backtrack (r-1) c ((Insert (c, cur_content :: content_lst)) :: t)
+          | _ -> backtrack (r-1) c ((Insert (c, [arr_new.(r-1)])) :: acc)
+        else failwith "impossible"
+    in
+    backtrack (length arr_new) (length arr_base) []
+end
 
 type file_diff = {
   file_name: string;
   is_deleted: bool;
-  content_diff: diff;
+  content_diff: Diff.diff;
 }
 
 type version_diff = {
@@ -17,104 +131,7 @@ type version_diff = {
 exception File_existed of string
 exception File_not_found of string
 
-let empty = [] 
-
-let calc_diff_old base_content new_content =
-  let base_delete =
-    (* create a list of Delete's corresponding to all lines in [base_content] *)
-    let rec add_delete from_index acc =
-      if from_index = 0 then acc
-      else add_delete (from_index - 1) ((Delete from_index)::acc)
-    in add_delete (List.length base_content) [] in
-  (Insert (0, new_content))::base_delete
-
-let calc_diff base_content new_content =
-  let open Array in
-  let arr_base = of_list base_content in
-  let arr_new = of_list new_content in
-  let mat = make_matrix (length arr_new + 1) (length arr_base + 1) 0 in
-  (* initialize first row*)
-  iteri (fun i ele -> mat.(0).(i) <- i) mat.(0);
-  iteri (fun i ele -> mat.(i).(0) <- i) mat;
-  for r = 1 to length arr_new do
-    for c = 1 to length arr_base do
-      let from_left = 1 + mat.(r).(c-1) in
-      let from_top = 1 + mat.(r-1).(c) in
-      let from_diagonal =
-        if arr_new.(r-1) = arr_base.(c-1)
-        then mat.(r-1).(c-1)
-        else max_int in
-      let min_dist = from_left |> min from_top |> min from_diagonal in
-      mat.(r).(c) <- min_dist
-    done
-  done;
-  let rec backtrack r c acc =
-    if r = 0 then
-      let rec prepend_delete counter acc' =
-        if counter = 0 then acc'
-        else prepend_delete (counter - 1) ((Delete counter) :: acc') in
-      prepend_delete c acc
-    else if c = 0 then
-      let content = sub arr_new 0 r |> to_list in
-      (Insert (0, content)) :: acc 
-    else
-      let cur = mat.(r).(c) in
-      let from_left = mat.(r).(c-1) + 1 in
-      let from_top = mat.(r-1).(c) + 1 in
-      let from_diagonal = mat.(r-1).(c-1) in
-      if from_diagonal = cur && arr_new.(r-1) = arr_base.(c-1)
-      then backtrack (r-1) (c-1) acc
-      else if from_left = cur
-      then backtrack r (c-1) ((Delete c)::acc)
-      else if from_top = cur
-      then match acc with
-        | (Insert (line, content_lst)) :: t when c = line ->
-          let cur_content = arr_new.(r-1) in
-          backtrack (r-1) c ((Insert (c, cur_content :: content_lst)) :: t)
-        | _ -> backtrack (r-1) c ((Insert (c, [arr_new.(r-1)])) :: acc)
-      else failwith "impossible"
-  in
-  backtrack (length arr_new) (length arr_base) []
-
-
-let apply_diff base_content diff_content =
-  (* go over every element in base_content, and compare the line number with
-   * information in diff_content, in order to see whether the current line
-   * should be kept, deleted, or followed by some new lines. *)
-  let rec match_op cur_index diff_lst acc =
-    (* new content willl be saved in acc, in reverse order *)
-    match diff_lst with
-    | [] ->
-      if cur_index > List.length base_content then acc
-      else let cur_line = List.nth base_content (cur_index-1) in
-        match_op (cur_index+1) diff_lst (cur_line::acc)
-    | h::t ->
-      begin match h with
-        | Delete ind ->
-          if cur_index = ind then
-            (* current line is deleted.
-             * move on to the next line. Do not add anything to acc *)
-            match_op (cur_index+1) t acc
-          else if cur_index < ind then
-            (* copy current line from base_content to acc *)
-            let cur_line = List.nth base_content (cur_index-1) in
-            match_op (cur_index+1) diff_lst (cur_line::acc)
-          else failwith "should not happen in update_diff"
-        | Insert (ind, str_lst) ->
-          if ind = 0 then
-            match_op cur_index t (List.rev str_lst)
-          else if cur_index < ind then
-            (* copy current line from base_content to acc *)
-            let cur_line = List.nth base_content (cur_index-1) in
-            match_op (cur_index+1) diff_lst (cur_line::acc)
-          else if cur_index = ind then
-            (* insert lines after current line *)
-            let cur_line = List.nth base_content (cur_index-1) in
-            let new_lst = List.rev (cur_line::str_lst) in
-            match_op (cur_index+1) t (new_lst @ acc)
-          else failwith "should not happen in update_diff"
-      end
-  in List.rev (match_op 1 diff_content [])
+open Diff_Init
 
 let extract_string json key = Ezjsonm.(get_string (find json [key]))
 

@@ -1,10 +1,22 @@
-(* [diff] represents an ocaml diff object between contents *)
-type diff
+module type Diff_Calc = sig
+  (* [diff] represents an ocaml diff object between contents *)
+  type diff
+  (* represents no difference between contents*)
+  val empty : diff
+  (* [calc_diff base_content new_content] returns the difference between
+   * [base_content] and [new_content] *)
+  val calc_diff : string list -> string list -> diff
+  (* [apply_diff base_content diff_content] returns the result
+   * after applying the changes in [diff_content] to [base_content] *)
+  val apply_diff : string list -> diff -> string list
+end
+
+module Diff : Diff_Calc
 
 type file_diff = {
   file_name: string;
   is_deleted: bool;
-  content_diff: diff;
+  content_diff: Diff.diff;
 }
 
 type version_diff = {
@@ -16,16 +28,6 @@ type version_diff = {
 exception File_existed of string
 exception File_not_found of string
 
-val empty : diff
-
-(* [calc_diff base_content new_content] returns the difference between
- * [base_content] and [new_content] *)
-val calc_diff : string list -> string list -> diff
-
-(* [apply_diff base_content diff_content] returns the result
- * after applying the changes in [diff_content] to [base_content] *)
-val apply_diff : string list -> diff -> string list
-
 (* [extract_string json key] gets the key-value pair in [json] keyed on [key],
   * and returns the corresponding string value *)
 val extract_string: Ezjsonm.value -> string -> string
@@ -36,11 +38,11 @@ val extract_int: Ezjsonm.value -> string -> int
 
 (* [build_diff_json diff_obj] returns the diff json representing
  * the ocaml diff object [diff_obj] *)
-val build_diff_json : diff -> Ezjsonm.value
+val build_diff_json : Diff.diff -> Ezjsonm.value
 
 (* [parse_diff_json diff_json] returns an ocaml diff object
  * represented by [diff_json] *)
-val parse_diff_json : Ezjsonm.value -> diff
+val parse_diff_json : Ezjsonm.value -> Diff.diff
 
 (* [build_version_diff_json v_diff] returns a json representing
  * the ocaml version_diff object [version_diff] *)
@@ -80,6 +82,7 @@ val delete_file : string -> unit
 (* [search_dir dir_handle add acc_file acc_dir dir_name valid_exts]
  * recursively searches for all the files in the directory
  * represented by [dir_handle] or its subdirectories,
- * and returns a set of all such files of approved suffixes in [valid_exts]. [add] is a function to add new file to the existing data structure [acc_file].
+ * and returns a set of all such files of approved suffixes in [valid_exts].
+ * [add] is a function to add new file to the existing data structure [acc_file].
  * requires: [dir_handle] is a valid directory handle returned by Unix.opendir. *)
 val search_dir : Unix.dir_handle -> (string -> 'a -> 'a) -> 'a -> string list -> string -> string list -> 'a

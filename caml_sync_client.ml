@@ -232,9 +232,9 @@ let remove_dir_and_files folder_name =
   | Not_found -> ()
 
 let generate_client_version_diff server_diff =
-  (*  0. create local_diff with compare_working_backup. *)
+  (* 0. create local_diff with compare_working_backup. *)
   let local_files_diff = compare_working_backup () in
-  (* 1. call check_both_modified_files to get both_modified_lst. *)
+  (* 1. Get the list of files modified on both sides . *)
   let both_modified_lst =
     check_both_modified_files local_files_diff server_diff in
   (* 2. rename files in both_modified_lst. *)
@@ -408,6 +408,18 @@ let () =
        begin try Sys.remove ".config" with
          | Sys_error e -> ()
        end
+     | "checkout" ->
+       let dir = "." in
+       let curr_handle =
+         try Unix.opendir dir with | _ -> raise Not_found
+       in
+       search_dir curr_handle (List.cons) [] [] dir valid_extensions |> List.iter delete_file;
+       let hidden_handle =
+         try Unix.opendir hidden_dir with | _ -> raise Not_found
+       in
+       let from_files = search_dir hidden_handle (List.cons) [] [] dir valid_extensions in
+       let to_files = List.map (fun file -> replace_prefix file "." hidden_dir) from_files in
+       copy_files from_files to_files
      | _ ->
        print_endline "usage:\n\
                       caml_sync init <url> <token> ->\n\

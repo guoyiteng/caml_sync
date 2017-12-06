@@ -6,6 +6,10 @@ open Ezjsonm
 
 module StrSet = Set.Make (String)
 
+exception Timeout
+exception Unauthorized
+exception ServerError of string
+
 let hidden_dir = ".caml_sync"
 
 let valid_extensions = [".ml"; ".mli"; ".txt"]
@@ -22,10 +26,7 @@ type config = {
 }
 
 let timeout =
-  fun () ->
-    bind (Lwt_unix.sleep 5.)
-      (fun _ ->
-         failwith("Timeout.\n") )
+  fun () -> bind (Lwt_unix.sleep 5.) (fun _ -> raise Timeout)
 
 let load_config () =
   try
@@ -38,12 +39,10 @@ let load_config () =
         version = get_int (List.assoc "version" dict);
       }
     with
-    | Not_found -> failwith("Failed to load [.config]: incorrect format")
+    | Not_found -> raise (File_not_found ".config")
   with
   | Sys_error e ->
-    print_endline e;
-    failwith("Cannot find .config. It seems the directory has not\
-              been initialized to a caml_sync directory.")
+    raise (File_not_found ".config")
 
 let update_config config =
   try
@@ -58,10 +57,8 @@ let update_config config =
     to_channel out json;
     flush out
   with
-  | Sys_error e ->
-    print_endline "Cannot find .config. It seems the directory has not\
-                   been initialized to a caml_sync directory.";
-    print_endline e
+  | _ ->
+    raise (File_not_found ".config")
 
 (* [get_all_filenames dir] returns a set of all the filenames
  * in directory [dir] or its subdirectories that are of approved suffixes *)
@@ -80,7 +77,7 @@ let post_local_diff config version_diff =
   let request = Client.post ~body:(body) uri
     >>= fun (resp, body) ->
     let code = resp |> Response.status |> Code.code_of_status in
-    if code = 401 then failwith("Unauthorized: Token incorrect. \n")
+    if code = 401 then raise Unauthorized
     else try (
       body |> Cohttp_lwt.Body.to_string >|= fun body ->
       match body |> from_string with
@@ -89,10 +86,10 @@ let post_local_diff config version_diff =
           | Some v ->
             get_int v
           | None ->
-            failwith("Server Error\n")
+            raise (ServerError "Unexpected response: not field version")
         end
-      | _ -> failwith("Server Error: Unexpected response. \n")
-    ) with _ -> failwith("Server Error\n")
+      | _ -> raise (ServerError "Unexpected response")
+    ) with _ -> raise (ServerError "Unexpected response body format")
   in Lwt_main.run (Lwt.pick [request; timeout ()])
 
 let compare_file filename =
@@ -284,16 +281,6 @@ let generate_client_version_diff server_diff =
     ) local_files_diff in
   (both_modified_lst, return_files_diff)
 
-let get_latest_version config =
-  let request = Client.get (Uri.of_string
-                              (config.url^"/version/?token="^config.token)) >>=
-    fun (resp, body) ->
-    let code = resp |> Response.status |> Code.code_of_status in
-    if code = 401 then
-      failwith("Unauthorized: Token incorrect. \n")
-    else
-      failwith("unimplemented") in
-  Lwt_main.run (Lwt.pick [request; timeout ()])
 
 let get_update_diff config =
   let open Uri in
@@ -305,7 +292,7 @@ let get_update_diff config =
   let request = Client.get uri
     >>= fun (resp, body) ->
     let code = resp |> Response.status |> Code.code_of_status in
-    if code = 401 then failwith("Unauthorized: Token incorrect. \n")
+    if code = 401 then raise Unauthorized
     else
       try (
         body |> Cohttp_lwt.Body.to_string >|= fun body ->
@@ -314,9 +301,8 @@ let get_update_diff config =
         generate_client_version_diff diff
       )
       with
-      | Not_found ->
-        print_endline "Server Error\n";
-        exit 0
+      | _ ->
+        raise (ServerError "during getting update diff")
   in Lwt_main.run (Lwt.pick [request; timeout ()])
 
 let sync () =
@@ -326,10 +312,30 @@ let sync () =
   if check_invalid_filename () then
     print_endline "Please resolve local merge conflict before syncing with the server.\n"
   else
+    let print_modified m_list =
+      if m_list = [] then ()
+      else
+        print_endline "Following file(s) have sync conflicts with the server:";
+        List.iter (
+          fun (file, deleted)->
+            if deleted then
+              print_endline (file^" - deleted")
+            else
+              print_endline file
+        ) m_list;
+      print_endline "These files have been renamed to [_local].";
+      if List.exists (fun (_,deleted) -> deleted) m_list then
+        print_endline "Files with [- deleted] appended have updates \
+                       from the server, yet are deleted locally and are not \
+                       renamed with the [_local] prefix. Please delete them again \
+                       if you still wish to do so."
+      else ()
+    in
     match get_update_diff config with
     | (m_list, []) ->
-      assert (m_list=[])
+      print_modified m_list
     | (m_list, diff_list) ->
+      print_modified m_list;
       let version_diff = {
         prev_version = config.version;
         cur_version = config.version;
@@ -352,12 +358,11 @@ let init url token =
   let code = resp |> Response.status |> Code.code_of_status in
   (* First checks if pass token test by the response status code *)
   if code = 401 then
-    `Empty |> Cohttp_lwt.Body.to_string >|= fun _ -> print_endline "Token incorrect"
+    `Empty |> Cohttp_lwt.Body.to_string >|= fun _ -> raise Unauthorized
   else
   if code <> 200 then
     `Empty |> Cohttp_lwt.Body.to_string >|= fun _ ->
-    print_endline "Servor Error\n";
-    print_endline (string_of_int code)
+    raise (ServerError "unexpected response code")
   else
     body |> Cohttp_lwt.Body.to_string >|= fun body ->
     print_endline body;
@@ -400,7 +405,9 @@ let () =
        else Lwt_main.run (init "127.0.0.1:8080" "default")
      | "clean" ->
        remove_dir_and_files ".caml_sync";
-       Sys.remove ".config"
+       begin try Sys.remove ".config" with
+         | Sys_error e -> ()
+       end
      | _ ->
        print_endline "usage:\n\
                       caml_sync init <url> <token> ->\n\

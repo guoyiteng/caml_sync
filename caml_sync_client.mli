@@ -13,10 +13,6 @@ val load_config : unit -> config
 (* [update_config config] updates the [.config] file with [config] *)
 val update_config : config -> unit
 
-(* [get_latest_version config] sends a query to the server and returns
- * the server's current version number *)
-val get_latest_version : config -> int option
-
 (* [get_update_diff config]
  * retrieves the current version of the working directory from [config],
  * sends a post request to the server to retrieve the difference between
@@ -59,7 +55,7 @@ val check_both_modified_files :
  * or rename the file. If [is_deleted] is true, we should delete the file. *)
 val rename_both_modified : (string * bool) list -> unit
 
-(* [generate_client_version_diff server_diff] returns [(both_modified_lst, local_diff_files)]. 
+(* [generate_client_version_diff server_diff] returns [(both_modified_lst, local_diff_files)].
  * returns: [None] if the current client has not made any update since the last sync,
  * otherwise returns [Some client_diff] where [client_diff] is the new update
  * that the current client has made

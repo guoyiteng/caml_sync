@@ -1,7 +1,8 @@
-(* [diff] represents an ocaml diff object between contents *)
-type diff
-
 module type Diff_Calc = sig
+
+  type op = Delete of int | Insert of (int * string list)
+
+  type t
   (* represents no difference between contents*)
   val empty : diff
   (* [calc_diff base_content new_content] returns the difference between
@@ -13,6 +14,10 @@ module type Diff_Calc = sig
 end
 
 module Diff : Diff_Calc
+
+(* [diff] represents an ocaml diff object between contents *)
+type diff
+type op
 
 type file_diff = {
   file_name: string;

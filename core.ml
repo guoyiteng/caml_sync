@@ -1,11 +1,7 @@
 module type Diff_Core = sig
-  (*  *)
   type op = Delete of int | Insert of (int * string list)
-  (*  *)
   type t = op list
-  (*  *)
   val empty : t
-  (*  *)
   val calc_diff : string list -> string list -> t
 end
 
@@ -163,7 +159,7 @@ module Make_Diff ( Diff_Impl : Diff_Core) : Diff = struct
                   ("line", int index);
                   ("content", to_json_strlist str_lst)]
         ) diff_obj
-    
+
     let parse_diff_json diff_json =
       let open Ezjsonm in
       get_list
@@ -171,11 +167,11 @@ module Make_Diff ( Diff_Impl : Diff_Core) : Diff = struct
            let op = extract_string elem "op" in
            let line_index = extract_int elem "line" in
            let content = extract_strlist elem "content" in
-           let open Diff_Impl in  
+           let open Diff_Impl in
            if op = "del" then Delete line_index
            else if op = "ins" then Insert (line_index, content)
            else failwith "Error when parsing json"
-        ) diff_json    
+        ) diff_json
 end
 
 module Diff_Impl = Make_Diff (DP_Diff)

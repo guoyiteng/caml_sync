@@ -21,9 +21,9 @@ module StrMap = Map.Make(String)
 type state = string list StrMap.t
 
 let default_config = {
-  server_id = "default";
-  url = "localhost";
-  token = "password";
+  server_id = "localhost";
+  url = "127.0.0.1";
+  token = "default";
   port = 8080;
   version = 0;
 }
@@ -229,10 +229,14 @@ let main () =
       print_endline "Cannot find config.json.";
       print_endline msg
     | _ -> raise Server_Error
+  else if Array.length Sys.argv = 2 && Sys.argv.(1) = "init"
+  then init "default"
   else if Array.length Sys.argv = 3 && Sys.argv.(1) = "init"
   then
     let token = Sys.argv.(2) in
     init token
+  else if Array.length Sys.argv = 2 && Sys.argv.(1) = "clean"
+  then raise Unimplemented 
   else
     print_endline "Invalid arguments.
     usage: ./caml_sync_server.native [init <token>]"

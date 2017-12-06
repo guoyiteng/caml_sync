@@ -1,19 +1,21 @@
-module type Diff_Calc = sig
+module type Diff = sig
 
   type op = Delete of int | Insert of (int * string list)
 
   type t
+
   (* represents no difference between contents*)
-  val empty : diff
+  val empty : t
+
   (* [calc_diff base_content new_content] returns the difference between
    * [base_content] and [new_content] *)
-  val calc_diff : string list -> string list -> diff
+  val calc_diff : string list -> string list -> t
   (* [apply_diff base_content diff_content] returns the result
    * after applying the changes in [diff_content] to [base_content] *)
-  val apply_diff : string list -> diff -> string list
+  val apply_diff : string list -> t -> string list
 end
 
-module Diff : Diff_Calc
+module Diff_Impl : Diff
 
 (* [diff] represents an ocaml diff object between contents *)
 type diff

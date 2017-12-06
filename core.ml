@@ -256,3 +256,25 @@ let delete_file filename =
   let rev_lst_split = String.split_on_char '/' filename |> List.rev |> List.tl in
   try Sys.remove filename; recursively_rm_dir rev_lst_split
   with Sys_error _ -> raise (File_not_found "Cannot remove file.")
+
+ let rec search_dir dir_handle add acc_file acc_dir dir_name valid_exts =
+  (* similar to BFS *)
+  match Unix.readdir dir_handle with
+  | exception End_of_file ->
+    let () = Unix.closedir dir_handle in
+    (* go into subdirectories *)
+    List.fold_left
+      (fun acc a_dir ->
+         let sub_d_handle = Unix.opendir a_dir in
+         search_dir sub_d_handle add acc [] a_dir valid_exts
+      ) acc_file acc_dir
+  | p_name ->
+    let path = dir_name ^ Filename.dir_sep ^ p_name in
+    if Sys.is_directory path && p_name <> "." && p_name <> ".." then
+      (* save information about this subdirectory in acc_dir, to be processed
+       * after having seen all files in the current directory *)
+      search_dir dir_handle add acc_file (path::acc_dir) dir_name valid_exts
+    else if List.mem (Filename.extension p_name) valid_exts then
+      let new_fileset = add path acc_file in
+      search_dir dir_handle add new_fileset acc_dir dir_name valid_exts
+    else search_dir dir_handle add acc_file acc_dir dir_name valid_exts

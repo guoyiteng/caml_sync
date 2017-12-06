@@ -1,5 +1,6 @@
+type op = Delete of int | Insert of (int * string list)
+
 module type Diff = sig
-  type op = Delete of int | Insert of (int * string list)
   type t
   val empty : t
   val calc_diff : string list -> string list -> t
@@ -7,8 +8,6 @@ module type Diff = sig
 end
 
 module Naive_Diff : Diff = struct
-  type op = Delete of int | Insert of (int * string list)
-
   type t = op list
 
   let empty = []
@@ -27,8 +26,6 @@ module Naive_Diff : Diff = struct
 end
 
 module DP_Diff : Diff = struct
-  type op = Delete of int | Insert of (int * string list)
-
   type t = op list
 
   let empty = []
@@ -132,7 +129,6 @@ end
 module Diff_Impl = Make_Diff (DP_Diff)
 
 type diff = Diff_Impl.t
-type op = Diff_Impl.op
 
 type file_diff = {
   file_name: string;

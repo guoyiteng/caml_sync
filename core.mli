@@ -1,7 +1,4 @@
 module type Diff = sig
-
-  type op = Delete of int | Insert of (int * string list)
-
   type t
 
   (* represents no difference between contents*)
@@ -19,7 +16,6 @@ module Diff_Impl : Diff
 
 (* [diff] represents an ocaml diff object between contents *)
 type diff
-type op
 
 type file_diff = {
   file_name: string;

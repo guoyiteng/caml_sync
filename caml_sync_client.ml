@@ -271,10 +271,10 @@ let generate_client_version_diff server_diff =
   rename_both_modified both_modified_lst;
   (* 3. copy files in both_modified_lst from hidden to local
    * directory. *)
-  let from_file_names =
-    both_modified_lst |> List.map (fun (filename, is_deleted) -> filename) in
   let to_file_names =
-    from_file_names |> List.map
+    both_modified_lst |> List.map (fun (filename, is_deleted) -> filename) in
+  let from_file_names =
+    to_file_names |> List.map
       (fun filename -> replace_prefix filename "." hidden_dir) in
   copy_files from_file_names to_file_names;
   (* 4. remove everything in hidden directory. *)

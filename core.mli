@@ -45,15 +45,6 @@ type version_diff = {
   edited_files: file_diff list
 }
 
-type history = {
-  version: int;
-  timestamp: float
-}
-
-type hisotry_log = {
-  log: history list
-}
-
 exception File_existed of string
 exception File_not_found of string
 
@@ -110,3 +101,17 @@ val delete_file : string -> unit
  * [f_add] is a function to add new file to the existing data structure [acc_file].
  * requires: [dir_handle] is a valid directory handle returned by Unix.opendir. *)
 val search_dir : Unix.dir_handle -> (string -> 'a -> 'a) -> 'a -> string list -> string -> string list -> 'a
+
+type history = {
+  version: int;
+  timestamp: float
+}
+
+type history_log = {
+  log: history list
+}
+
+val build_history_json : history -> Ezjsonm.t
+val parse_history_json : Ezjsonm.t -> history
+val build_history_log_json : history_log -> Ezjsonm.t
+val parse_history_log_json : Ezjsonm.t -> history_log

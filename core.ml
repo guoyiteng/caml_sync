@@ -188,15 +188,6 @@ type version_diff = {
   edited_files: file_diff list
 }
 
-type history = {
-  version: int;
-  timestamp: float
-}
-
-type hisotry_log = {
-  log: history list
-}
-
 exception File_existed of string
 exception File_not_found of string
 
@@ -322,3 +313,17 @@ let delete_file filename =
       let new_fileset = add path acc_file in
       search_dir dir_handle add new_fileset acc_dir dir_name valid_exts
     else search_dir dir_handle add acc_file acc_dir dir_name valid_exts
+
+type history = {
+  version: int;
+  timestamp: float
+}
+
+type hisotry_log = {
+  log: history list
+}
+
+let build_history_json h_diff = failwith "todo"
+let parse_history_json h_json = failwith "todo"
+let build_history_log_json hl_diff = failwith "todo"
+let parse_history_log_json hl_json = failwith "todo"

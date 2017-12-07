@@ -171,15 +171,20 @@ let handle_get_current_version = get "/version" begin fun req ->
       `String ("Unauthorized Access") |> respond' ~code:`Unauthorized
   end
 
-let handle_get_history_list = 
-  raise Unimplemented
-(* let config = load_config () in *)
-
-
-let handle_post_diff_from_client = post "/history" begin fun
+let handle_get_history_list = post "/history" begin fun
     req ->
     let config = load_config () in
     if verify_token req config then
+      `Json (load_history () |> build_history_log_json) |> respond'
+    else
+      `String ("Unauthorized Access") |> respond' ~code:`Unauthorized
+  end
+
+let handle_post_diff_from_client = post "/diff" begin fun
+    req ->
+    let config = load_config () in
+    if verify_token req config then
+      let history_log = load_history () in
       req |> App.json_of_body_exn |> Lwt.map
         begin fun req_json ->
           let req_v_diff = parse_version_diff_json req_json in
@@ -192,6 +197,10 @@ let handle_post_diff_from_client = post "/history" begin fun
           } |> build_version_diff_json in
           write_json ("version_" ^ (string_of_int new_version) ^ ".diff") save_json;
           write_config new_config;
+          write_history {
+            log = ( {version = new_version; timestamp = Unix.time ()} :: 
+                    (List.rev history_log.log)) |> List.rev 
+          };
           `Json (
             let open Ezjsonm in
             dict ["version", int new_config.version]

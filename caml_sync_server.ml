@@ -40,14 +40,6 @@ let write_config c =
         "version", (int c.version)]
   |> write_json "config.json"
 
-let init token =
-  write_config {default_config with token = token};
-  {
-    prev_version = 0;
-    cur_version = 0;
-    edited_files = []
-  } |> build_version_diff_json |> write_json "version_0.diff"
-
 let load_config () =
   let json = read_json "config.json" in
   {
@@ -57,6 +49,30 @@ let load_config () =
     port = extract_int json "port";
     version = extract_int json "version";
   }
+
+let init_history () =
+  {
+    log = [{
+        version = 0;
+        timestamp = Unix.time ()
+      }]
+  } |> build_history_log_json |> write_json "history.json"
+
+let write_history log =
+  log |> build_history_log_json |> write_json "history.json"
+
+let load_history () =
+  let json = read_json "history.json" in
+  json |> parse_history_log_json
+
+let init token =
+  write_config {default_config with token = token};
+  init_history ();
+  {
+    prev_version = 0;
+    cur_version = 0;
+    edited_files = []
+  } |> build_version_diff_json |> write_json "version_0.diff"
 
 let calc_file_diffs_between_states state1 state2 =
   let open StrMap in
@@ -155,10 +171,20 @@ let handle_get_current_version = get "/version" begin fun req ->
       `String ("Unauthorized Access") |> respond' ~code:`Unauthorized
   end
 
+let handle_get_history_list = post "/history" begin fun
+    req ->
+    let config = load_config () in
+    if verify_token req config then
+      `Json (load_history () |> build_history_log_json) |> respond'
+    else
+      `String ("Unauthorized Access") |> respond' ~code:`Unauthorized
+  end
+
 let handle_post_diff_from_client = post "/diff" begin fun
     req ->
     let config = load_config () in
     if verify_token req config then
+      let history_log = load_history () in
       req |> App.json_of_body_exn |> Lwt.map
         begin fun req_json ->
           let req_v_diff = parse_version_diff_json req_json in
@@ -171,6 +197,10 @@ let handle_post_diff_from_client = post "/diff" begin fun
           } |> build_version_diff_json in
           write_json ("version_" ^ (string_of_int new_version) ^ ".diff") save_json;
           write_config new_config;
+          write_history {
+            log = ( {version = new_version; timestamp = Unix.time ()} :: 
+                    (List.rev history_log.log)) |> List.rev 
+          };
           `Json (
             let open Ezjsonm in
             dict ["version", int new_config.version]

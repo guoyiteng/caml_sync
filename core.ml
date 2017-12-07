@@ -93,6 +93,10 @@ let extract_int json key = Ezjsonm.(get_int (find json [key]))
   * and returns the corresponding bool value *)
 let extract_bool json key = Ezjsonm.(get_bool (find json [key]))
 
+(* [extract_float json key] gets the key-value pair in [json] keyed on [key],
+  * and returns the corresponding float value *)
+let extract_float json key = Ezjsonm.(get_float (find json [key]))
+
 (* [extract_strlist json key] gets the key-value pair in [json] keyed on [key],
   * and returns the corresponding string list value *)
 let extract_strlist json key = Ezjsonm.(get_strings (find json [key]))
@@ -205,7 +209,7 @@ let build_version_diff_json v_diff =
     ) v_diff.edited_files;
   ]
 
-(* [parse_version_diff_json f_json] returns an ocaml file_diff object
+(* [parse_file_diff_json f_json] returns an ocaml file_diff object
  * represented by [f_json] *)
 let parse_file_diff_json f_json =
   let open Ezjsonm in
@@ -323,7 +327,28 @@ type history_log = {
   log: history list
 }
 
-let build_history_json h = failwith "todo"
-let parse_history_json h_json = failwith "todo"
-let build_history_log_json hl = failwith "todo"
-let parse_history_log_json hl_json = failwith "todo"
+let build_history_json h =
+  let open Ezjsonm in
+  dict [
+    "version", (int h.version);
+    "timestamp", (float h.timestamp);
+  ]
+
+let parse_history_json h_json =
+  {
+    version = extract_int h_json "version";
+    timestamp = extract_float h_json "timestamp";
+  }
+
+let build_history_log_json hl =
+  let open Ezjsonm in
+  dict [
+    "log", list (fun h -> build_history_json h) hl.log;
+  ]
+
+let parse_history_log_json hl_json =
+  let open Ezjsonm in
+  let hl_json' = value hl_json in
+  {
+    log = get_list parse_history_json (find hl_json' ["log"])
+  }

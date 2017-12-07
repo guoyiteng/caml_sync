@@ -228,6 +228,26 @@ let remove_dir_and_files folder_name =
   with
   | Not_found -> ()
 
+(* [apply_v_diff_to_dir v_diff dir_prefix] applies the version_diff [v_diff] to
+ * the directory indicated by dir_prefix
+ * requires: the string for [dir_prefix] does not end with '/'
+ *)
+let apply_v_diff_to_dir v_diff dir_prefix =
+  List.iter (fun {file_name; is_deleted; content_diff} ->
+      let f_name = replace_prefix file_name "." dir_prefix in
+      if is_deleted
+      then delete_file f_name
+      else
+        let content =
+          if Sys.file_exists f_name
+          then
+            let content' = read_file f_name in
+            delete_file f_name;
+            content'
+          else [] in
+          Diff_Impl.apply_diff content content_diff |> write_file f_name
+    ) v_diff.edited_files
+
 let generate_client_version_diff server_diff =
   (* 0. create local_diff with compare_working_backup. *)
   let local_files_diff = compare_working_backup () in
@@ -247,28 +267,13 @@ let generate_client_version_diff server_diff =
   (* 4. remove everything in hidden directory. *)
   remove_dir_and_files hidden_dir;
   (* 5. apply server_diff to local directory. *)
-  List.iter (fun {file_name; is_deleted; content_diff} ->
-      if is_deleted
-      then delete_file file_name
-      else
-        let content =
-          if Sys.file_exists file_name
-          then
-            let content' = read_file file_name in
-            delete_file file_name;
-            content'
-          else [] in
-          Diff_Impl.apply_diff content content_diff |> write_file file_name
-    ) server_diff.edited_files;
+  apply_v_diff_to_dir server_diff ".";
   (* 6. call backup_working_files to copy everything from local
    * directory to hidden directory. *)
   backup_working_files ();
-  begin
-    try
-      Unix.mkdir hidden_dir 0o770
-    with
-    | Unix.Unix_error _ -> ()
-  end;
+  (* if there is not a hidden dir, create one *)
+  if not (Sys.is_directory hidden_dir) then
+    Unix.mkdir hidden_dir 0o770;
   (* 7. remove files in both_modified_list from local_diff
    * and return the resulting version_diff *)
   let return_files_diff = List.filter (fun {file_name} ->

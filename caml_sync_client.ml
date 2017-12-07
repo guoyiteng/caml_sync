@@ -481,8 +481,7 @@ let delete_history_folders () =
 *)
 let main () =
   if Array.length Sys.argv = 1 then
-    ignore(compare_working_backup ())
-    (* sync () *)
+    sync ()
   else match Array.get Sys.argv 1 with
     | "init" ->
       begin try (

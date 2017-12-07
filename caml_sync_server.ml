@@ -30,6 +30,8 @@ let default_config = {
   version = 0;
 }
 
+let lock = Rwlock.create ()
+
 (* [write_config c] writes server config [c] to "config.json". *)
 let write_config c =
   let open Ezjsonm in
@@ -138,7 +140,9 @@ let calc_diff_by_version v_from v_to =
   if v_from = v_to then []
   else let init_state = StrMap.empty in
     let rec update_to_version state cur_ver ver = begin
+      Rwlock.read_lock lock;
       let v_json = read_json ("version_" ^ string_of_int cur_ver ^ ".diff") in
+      Rwlock.read_unlock lock;
       let v_diff = parse_version_diff_json v_json in
       assert (v_diff.cur_version = cur_ver);
       let new_state = apply_version_diff_to_state v_diff state in
@@ -160,7 +164,9 @@ let verify_token req config =
 
 let handle_get_current_version = get "/version" begin fun req ->
     (* load config from config.json *)
+    Rwlock.read_lock lock;
     let config = load_config () in
+    Rwlock.read_unlock lock;
     if verify_token req config then
       `Json (
         let open Ezjsonm in
@@ -173,9 +179,11 @@ let handle_get_current_version = get "/version" begin fun req ->
 
 let handle_get_history_list = get "/history" begin fun
     req ->
+    Rwlock.read_lock lock;
     let config = load_config () in
     if verify_token req config then
     let logs = (load_history ()).log in
+    Rwlock.read_unlock lock;
       `Json ({log = List.tl logs} |> build_history_log_json) |> respond'
     else
       `String ("Unauthorized Access") |> respond' ~code:`Unauthorized
@@ -183,7 +191,9 @@ let handle_get_history_list = get "/history" begin fun
 
 let handle_post_diff_from_client = post "/diff" begin fun
     req ->
+    Rwlock.read_lock lock;
     let config = load_config () in
+    Rwlock.read_unlock lock;
     if verify_token req config then
       let history_log = load_history () in
       req |> App.json_of_body_exn |> Lwt.map
@@ -196,12 +206,14 @@ let handle_post_diff_from_client = post "/diff" begin fun
             prev_version = config.version;
             cur_version = new_version
           } |> build_version_diff_json in
+          Rwlock.write_lock lock;
           write_json ("version_" ^ (string_of_int new_version) ^ ".diff") save_json;
           write_config new_config;
           write_history {
             log = ( {version = new_version; timestamp = Unix.time ()} :: 
                     (List.rev history_log.log)) |> List.rev 
           };
+          Rwlock.write_unlock lock;
           `Json (
             let open Ezjsonm in
             dict ["version", int new_config.version]
@@ -213,7 +225,9 @@ let handle_post_diff_from_client = post "/diff" begin fun
 
 let handle_get_diff_from_client = get "/diff" begin fun
     req ->
+    Rwlock.read_lock lock;
     let config = load_config () in
+    Rwlock.read_unlock lock;
     if verify_token req config then
       try
         let parse_from_or_to from_or_to =

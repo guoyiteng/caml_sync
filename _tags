@@ -1,1 +1,1 @@
-true: package(opium), package(oUnit), package(str)
+true: package(opium), package(oUnit), package(str), thread

@@ -6,6 +6,8 @@ install:
 uninstall:
 	unlink /usr/local/bin/camlsync
 	unlink /usr/local/bin/camlsyncserver
+lock:
+	ocamlbuild -use-ocamlfind lock.byte
 server:
 	ocamlbuild -use-ocamlfind caml_sync_server.native
 client:

@@ -1,3 +1,4 @@
 B _build
+B +threads
 PKG oUnit
 PKG opium opium.unix

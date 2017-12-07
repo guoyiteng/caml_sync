@@ -27,7 +27,7 @@ let unwanted_strs =
    history_dir_prefix]
 
 let usage = "usage: camlsync [<init [url token]> | <clean> | <checkout> \
-             <status> | <history (num) | list | clean>]"
+             <status> | <history (num) | list | clean> | <conflict [clean]>]"
 
 type config = {
   client_id: string;
@@ -424,8 +424,7 @@ let init url token =
       begin match List.assoc_opt "version" json with
         | Some v ->
           if Sys.file_exists ".config" then
-            print_endline "[.config] already exsits.\n It seems like the current directory \
-                           has already been initialized into a camlsync client directory."
+            print_endline ("[.config] already exsits.\n" ^ "It seems like the current directory has already been initialized into a camlsync client directory.")
           else
             let config = {
               client_id = "client";
@@ -519,6 +518,7 @@ let main () =
         (List.nth week tm.tm_wday)^" "^
         (string_of_int tm.tm_hour)^":"^(string_of_int tm.tm_min) in
       if (Array.get Sys.argv 2) = "list" then
+      (* TODO: version 0 should be removed *)
         let history_log = (history_list (load_config ())) in
         List.iter
           (fun (hist:history):unit -> print_endline
@@ -528,6 +528,9 @@ let main () =
               )
           )
           history_log.log
+      else if Sys.argv.(2) = "clean" then
+        (delete_history_folders ();
+         print_endline "All history version folders have been removed.")
       else
         let v =
           try int_of_string (Array.get Sys.argv 2)
@@ -535,6 +538,7 @@ let main () =
         in
         if v < 1 then raise (Invalid_argument "The version number must be an integer which is larger than or equal to 1.")
         else time_travel (load_config ()) v
+        (* TODO: add printout *)
     | "help" ->
       print_endline usage
     | "conflict" ->

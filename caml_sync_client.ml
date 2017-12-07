@@ -17,11 +17,14 @@ let month = ["Jan";"Feb";"Mar";"Apr";"May";"Jun";"Jul";"Aug";"Sep";"Oct";"Nov";"
 
 let hidden_dir = ".caml_sync"
 
+let history_dir_prefix = "./history_version_"
+
 let valid_extensions = [".ml"; ".mli"; ".txt"]
 
 let unwanted_strs =
   ["." ^ Filename.dir_sep ^ hidden_dir ^ Filename.dir_sep;
-   "." ^ Filename.dir_sep ^ ".config"]
+   "." ^ Filename.dir_sep ^ ".config";
+    history_dir_prefix]
 
 type config = {
   client_id: string;
@@ -325,21 +328,27 @@ let history_list config =
   in Lwt_main.run (Lwt.pick [request; timeout ()])
 
 let time_travel config v =
-let open Uri in
-let uri = Uri.of_string  ("//"^config.url) in
-let uri = with_path uri "history" in
-let uri = with_scheme uri (Some "http") in
-let uri = Uri.add_query_param' uri ("token", config.token) in
-let uri = Uri.add_query_param' uri ("to", v) in
-let request = Client.post uri
-  >>= fun (resp, body) ->
-  let code = resp |> Response.status |> Code.code_of_status in
-  if code = 401 then raise Unauthorized
-  else try (
-    body |> Cohttp_lwt.Body.to_string >|= fun body ->
-    let version_diff = body |> from_string |> parse_version_diff_json in
-    apply_v_diff version_diff
-in Lwt_main.run (Lwt.pick [request; timeout ()])
+  let new_dir = history_dir_prefix ^ (string_of_int v) in
+  if Sys.is_directory new_dir then begin
+    remove_dir_and_files new_dir;
+    print_endline (new_dir^" deleted.");
+  end;
+  let open Uri in
+  let uri = Uri.of_string  ("//"^config.url) in
+  let uri = with_path uri "history" in
+  let uri = with_scheme uri (Some "http") in
+  let uri = Uri.add_query_param' uri ("token", config.token) in
+  let uri = Uri.add_query_param' uri ("to", string_of_int v) in
+  let request = Client.post uri
+    >>= fun (resp, body) ->
+    let code = resp |> Response.status |> Code.code_of_status in
+    if code = 401 then raise Unauthorized
+    else try (
+      body |> Cohttp_lwt.Body.to_string >|= fun body ->
+      let version_diff = body |> from_string |> parse_version_diff_json in
+      apply_v_diff_to_dir version_diff new_dir
+    ) with _ -> raise (ServerError "Unexpected response")
+  in Lwt_main.run (Lwt.pick [request; timeout ()])
 
 let sync () =
   print_endline "Loading [.config]...";
@@ -491,7 +500,7 @@ let main () =
            try int_of_string (Array.get Sys.argv 2)
            with _ -> raise Invalid_argument
          in
-         failwith "unimplemented"
+         time_travel (load_config ()) v
      | "help" ->
        print_endline "usage: camlsync [<init [url token]> | <clean> | <checkout> \
                       <status> | <history>]"

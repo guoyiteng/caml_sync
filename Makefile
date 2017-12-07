@@ -1,19 +1,17 @@
 .PHONY: server client
 all: server client
 install:
-	ln -s "`pwd | sed 's/ /\\ /g'`/_build/caml_sync_client.native" /usr/local/bin/camlsync
-	ln -s "`pwd | sed 's/ /\\ /g'`/_build/caml_sync_server.native" /usr/local/bin/camlsyncserver
+	ln -sf `pwd | sed 's/ /\\ /g'`/_build/caml_sync_client.native /usr/local/bin/camlsync
+	ln -sf `pwd | sed 's/ /\\ /g'`/_build/caml_sync_server.native /usr/local/bin/camlsyncserver
 uninstall:
 	unlink /usr/local/bin/camlsync
 	unlink /usr/local/bin/camlsyncserver
 server:
 	ocamlbuild -use-ocamlfind caml_sync_server.native
 	rm -f server/caml_sync_server.native
-	mv caml_sync_server.native server/caml_sync_server.native
 client:
 	ocamlbuild -use-ocamlfind caml_sync_client.native
 	rm -f client/caml_sync_client.native
-	mv caml_sync_client.native client/caml_sync_client.native
 server_template:
 	ocamlbuild -use-ocamlfind server_template.native && ./server_template.native
 sync:

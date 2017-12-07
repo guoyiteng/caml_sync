@@ -42,7 +42,13 @@ let load_config () =
     with
     | Not_found -> raise Not_Initialized
   with
+<<<<<<< HEAD
   | Sys_error e -> raise Not_Initialized
+=======
+  | Sys_error e ->
+    print_endline "[.config] not found. Please initialize client first.";
+    exit 0
+>>>>>>> 2e0e9138d52a0d98d666541c47974d2556af9d4d
 
 let update_config config =
   try

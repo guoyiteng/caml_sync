@@ -202,13 +202,22 @@ let compare_working_backup () =
       (fun str -> replace_prefix str hidden_dir ".") filenames_last_sync in
   let deleted_files =
     StrSet.diff trans_filenames_last_sync filenames_cur in
-  StrSet.fold
+  let added_files =
+    StrSet.diff filenames_cur trans_filenames_last_sync in
+  working_files_diff_lst 
+  |> StrSet.fold
     (fun f_name acc ->
        {
          file_name = f_name;
          is_deleted = true;
          content_diff = Diff_Impl.calc_diff [] []
-       }::acc) deleted_files working_files_diff_lst
+       }::acc) deleted_files
+  |> StrSet.fold (fun f_name acc ->
+      {
+        file_name = f_name;
+        is_deleted = false;
+        content_diff = Diff_Impl.calc_diff [] []
+      }::acc) added_files
 
 (* [check_both_modified_files modified_file_diffs version_diff]
  * returns a list of [(filename, is_deleted)] that indicates files that are

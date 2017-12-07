@@ -68,6 +68,8 @@ val generate_client_version_diff : version_diff -> (string * bool) list * file_d
 *)
 val backup_working_files : unit -> unit
 
+val history_list : config -> history_log
+
 (* [init url token] creates a hidden ".config" file and stores [url] and [token]
  * in ".config". It also creates a folder ".caml_sync/" in the current directory.
  * Users can change this [url] and [token] manually in ".config". *)

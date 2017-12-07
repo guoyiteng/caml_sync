@@ -12,6 +12,9 @@ exception ServerError of string
 exception Not_Initialized
 exception Invalid_argument
 
+let week = ["Sun";"Mon";"Tue";"Wed";"Thu";"Fri";"Sat"]
+let month = ["Jan";"Feb";"Mar";"Apr";"May";"Jun";"Jul";"Aug";"Sep";"Oct";"Nov";"Dec"]
+
 let hidden_dir = ".caml_sync"
 
 let valid_extensions = [".ml"; ".mli"; ".txt"]
@@ -296,8 +299,42 @@ let get_update_diff config =
       )
       with
       | _ ->
-        raise (ServerError "during getting update diff")
+        raise (ServerError "During getting update diff")
   in Lwt_main.run (Lwt.pick [request; timeout ()])
+
+let history_list config =
+  let open Uri in
+  let uri = Uri.of_string  ("//"^config.url) in
+  let uri = with_path uri "history" in
+  let uri = with_scheme uri (Some "http") in
+  let uri = Uri.add_query_param' uri ("token", config.token) in
+  let request = Client.get uri
+    >>= fun (resp, body) ->
+    let code = resp |> Response.status |> Code.code_of_status in
+    if code = 401 then raise Unauthorized
+    else
+      try (
+        body |> Cohttp_lwt.Body.to_string >|= fun body ->
+        body |> from_string |> parse_history_log_json
+      ) with |_ -> raise (ServerError "During getting history list")
+  in Lwt_main.run (Lwt.pick [request; timeout ()])
+
+let time_travel config v =
+let open Uri in
+let uri = Uri.of_string  ("//"^config.url) in
+let uri = with_path uri "history" in
+let uri = with_scheme uri (Some "http") in
+let uri = Uri.add_query_param' uri ("token", config.token) in
+let uri = Uri.add_query_param' uri ("to", v) in
+let request = Client.post uri
+  >>= fun (resp, body) ->
+  let code = resp |> Response.status |> Code.code_of_status in
+  if code = 401 then raise Unauthorized
+  else try (
+    body |> Cohttp_lwt.Body.to_string >|= fun body ->
+    let version_diff = body |> from_string |> parse_version_diff_json in
+    apply_v_diff version_diff
+in Lwt_main.run (Lwt.pick [request; timeout ()])
 
 let sync () =
   print_endline "Loading [.config]...";
@@ -427,8 +464,23 @@ let main () =
                    -> let f_status = if is_deleted then "deleted" else "modified" in
                      print_endline (f_status ^ " : " ^  file_name)) f_diffs
      | "history" ->
-       if Array.get Sys.argv 2 = "list" then
-         failwith "unimplemented"
+       let fmt timestamp =
+         let open Unix in
+         let tm = timestamp |> localtime in
+         (string_of_int (tm.tm_year+1900))^" "^
+         (List.nth month tm.tm_mon)^" "^(string_of_int tm.tm_mday)^" "^
+         (List.nth week tm.tm_wday)^" "^
+         (string_of_int tm.tm_hour)^":"^(string_of_int tm.tm_min) in
+       if (Array.get Sys.argv 2) = "list" then
+         let history_log = (history_list (load_config ())) in
+         List.iter
+           (fun (hist:history):unit -> print_endline
+               (
+                 "Version: "^(string_of_int hist.version)
+                 ^"; Time: "^(fmt hist.timestamp)
+               )
+           )
+           history_log.log
        else
          let v =
            try int_of_string (Array.get Sys.argv 2)

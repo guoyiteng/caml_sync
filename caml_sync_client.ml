@@ -341,7 +341,7 @@ let time_travel config v =
   let new_dir = history_dir_prefix ^ (string_of_int v) in
   if Sys.file_exists new_dir then begin
     remove_dir_and_files new_dir;
-    print_endline (new_dir^" deleted.");
+    print_endline (new_dir ^ " is refreshed.");
   end;
   let open Uri in
   let uri = Uri.of_string  ("//"^config.url) in
@@ -368,22 +368,22 @@ let sync () =
   else
     let print_modified m_list =
       if m_list = [] then ()
-      else
+      else begin
         print_endline "Following file(s) have sync conflicts with the server:";
-      List.iter (
-        fun (file, deleted)->
-          if deleted then
-            print_endline ("# " ^ file ^ " - deleted")
-          else
-            print_endline ("# " ^ file)
-      ) m_list;
-      print_endline "These files have been renamed to [*_local].";
-      if List.exists (fun (_,deleted) -> deleted) m_list then
-        print_endline "Files with [- deleted] appended have updates \
-                       from the server, yet are deleted locally and are not \
-                       renamed with the [*_local] suffix. Please delete them again \
-                       if you still wish to do so."
-      else ()
+        List.iter (
+          fun (file, deleted)->
+            if deleted then
+              print_endline ("# " ^ file ^ " - deleted")
+            else
+              print_endline ("# " ^ file)
+        ) m_list;
+        print_endline "These files have been renamed to [*_local].";
+        if List.exists (fun (_,deleted) -> deleted) m_list then
+          print_endline "Files with [- deleted] appended have updates \
+                         from the server, yet are deleted locally and are not \
+                         renamed with the [*_local] suffix. Please delete them again \
+                         if you still wish to do so."
+      end
     in
     match get_update_diff config with
     | (m_list, []) ->
@@ -419,13 +419,12 @@ let init url token =
     raise (ServerError "unexpected response code")
   else
     body |> Cohttp_lwt.Body.to_string >|= fun body ->
-    print_endline body;
     match (from_string body) with
     | `O (json) ->
       begin match List.assoc_opt "version" json with
         | Some v ->
           if Sys.file_exists ".config" then
-            print_endline "[.config] already exsits; it seems like the current directory\
+            print_endline "[.config] already exsits; it seems like the current directory \
                            has already been initialized into a caml_sync client directory"
           else
             let config = {

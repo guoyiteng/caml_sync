@@ -143,7 +143,10 @@ let check_invalid_filename () =
        else if contains_local elem then true else acc) filenames_cur false
 
 let compare_working_backup () =
-  let filenames_last_sync = get_all_filenames hidden_dir in
+  let filenames_last_sync =
+    try get_all_filenames hidden_dir
+    with _ -> raise Not_Initialized
+  in
   let filenames_cur =
     get_all_filenames "." |> StrSet.filter
       (fun elem -> not(has_prefix_in_lst elem unwanted_strs)) in

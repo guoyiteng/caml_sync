@@ -237,13 +237,17 @@ let handle_get_diff_from_client = get "/diff" begin fun
           match from_or_to |> Uri.get_query_param (Request.uri req) with
           | Some str -> 
             if is_int str then int_of_string str
-            else if from_or_to = "from" then raise (Invalid_argument "Parameter [from] is illegal.")
-            else if from_or_to = "to" then raise (Invalid_argument "Parameter [to] is illegal.")
-            else raise (Server_error "parse_from_or_to only can parse from or to")
+            else if from_or_to = "from" 
+            then raise (Invalid_argument "Parameter [from] is illegal.")
+            else if from_or_to = "to" 
+            then raise (Invalid_argument "Parameter [to] is illegal.")
+            else raise (Server_error 
+                          "parse_from_or_to only can parse from or to")
           | None ->
             if from_or_to = "from" then 0
             else if from_or_to = "to" then config.version
-            else raise (Server_error "parse_from_or_to only can parse from or to") in
+            else raise (Server_error 
+                          "parse_from_or_to only can parse from or to") in
         let from_v = parse_from_or_to "from" in
         let to_v = parse_from_or_to "to" in
         if from_v <= to_v then
@@ -269,7 +273,8 @@ let main () =
       try
         let config = load_config () in
         print_endline ("Server's name: " ^ config.server_id);
-        print_endline ("Server opens at " ^ config.url ^ ":" ^ (string_of_int config.port));
+        print_endline ("Server opens at " ^ config.url 
+                       ^ ":" ^ (string_of_int config.port));
         print_endline ("Token: " ^ config.token);
         App.empty
         |> App.port config.port
@@ -297,14 +302,17 @@ let main () =
       let dir = "." in
       let d_handle =
         try Unix.opendir dir  with | _ -> raise Not_found
-      in search_dir d_handle (List.cons) [] [] dir [".json"; ".diff"] |> List.iter delete_file
+      in search_dir d_handle (List.cons) [] [] dir [".json"; ".diff"] 
+         |> List.iter delete_file
     else
       raise (Invalid_argument "Invalid arguments")
   with
   | Not_init -> print_endline "Please initialize your server first.";
   | Already_init -> 
-    print_endline "This directory has already been initialized as a server working directory.";
-    print_endline "You can use \'camlsyncserver clean\' to clean up this direcotry."
+    print_endline "This directory has already been \
+                   initialized as a server working directory.";
+    print_endline "You can use \'camlsyncserver clean\' \
+                   to clean up this direcotry."
   | Invalid_argument _ -> 
     print_endline "Invalid arguments.";
     print_endline "usage: camlsyncserver [<init [token]> | <clean>]"

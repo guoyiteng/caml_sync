@@ -10,7 +10,8 @@ let config : Caml_sync_client.config = {
 
 let config_tests = [
   "basic_write_read_consistency" >::(fun _ -> assert_equal
-                                        config (update_config config; load_config ()));
+                                        config (update_config config; 
+                                                load_config ()));
   "basic_update">:: (fun _ -> assert_equal
                         (update_config {config with version=1};
                          Caml_sync_client.load_config ())

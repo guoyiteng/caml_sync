@@ -2,7 +2,9 @@ open Core
 open Opium.Std
 
 exception Unimplemented
-exception Server_Error
+exception Not_init
+exception Already_init
+exception Server_error of string
 
 type version = int
 
@@ -100,7 +102,7 @@ let apply_version_diff_to_state version_diff state =
        let content_diff = filediff.content_diff in
        if not(mem cur_file acc) then
          begin
-           if (to_delete) then failwith "Invalid version diff"
+           if (to_delete) then raise (Server_error "Invalid version diff")
            else
              (* create new file *)
              let new_content = Diff_Impl.apply_diff [] content_diff in
@@ -211,37 +213,49 @@ let handle_get_diff_from_client = get "/diff" begin fun
   end
 
 let main () =
-  if Array.length Sys.argv = 1
-  then
-    try
-      let config = load_config () in
-      print_endline ("Server's name: " ^ config.server_id);
-      print_endline ("Server opens at " ^ config.url ^ ":" ^ (string_of_int config.port));
-      print_endline ("Token: " ^ config.token);
-      App.empty
-      |> App.port config.port
-      |> handle_get_current_version
-      |> handle_post_diff_from_client
-      |> handle_get_diff_from_client
-      |> App.run_command
-    with
-    | Sys_error msg ->
-      print_endline "Cannot find config.json.";
-      print_endline msg
-    | _ -> raise Server_Error
-  else if Array.length Sys.argv = 2 && Sys.argv.(1) = "init"
-  then init "default"
-  else if Array.length Sys.argv = 3 && Sys.argv.(1) = "init"
-  then
-    let token = Sys.argv.(2) in
-    init token
-  else if Array.length Sys.argv = 2 && Sys.argv.(1) = "clean"
-  then
-  let dir = "." in
-  let d_handle =
-  try Unix.opendir dir  with | _ -> raise Not_found;
-  in search_dir d_handle (List.cons) [] [] dir [".json"; ".diff"] |> List.iter delete_file
-  else
-    print_endline "Invalid arguments.
-    usage: ./caml_sync_server.native [init <token>]"
+  try
+    if Array.length Sys.argv = 1
+    then
+      try
+        let config = load_config () in
+        print_endline ("Server's name: " ^ config.server_id);
+        print_endline ("Server opens at " ^ config.url ^ ":" ^ (string_of_int config.port));
+        print_endline ("Token: " ^ config.token);
+        App.empty
+        |> App.port config.port
+        |> handle_get_current_version
+        |> handle_post_diff_from_client
+        |> handle_get_diff_from_client
+        |> App.run_command
+      with
+      | File_not_found msg ->
+        raise Not_init
+    else if Array.length Sys.argv = 2 && Sys.argv.(1) = "init"
+    then 
+      if not (Sys.file_exists "config.json") then
+        init "default"
+      else raise Already_init
+    else if Array.length Sys.argv = 3 && Sys.argv.(1) = "init"
+    then
+      let token = Sys.argv.(2) in
+      if not (Sys.file_exists "config.json") then
+        init token
+      else raise Already_init
+    else if Array.length Sys.argv = 2 && Sys.argv.(1) = "clean"
+    then
+      let dir = "." in
+      let d_handle =
+        try Unix.opendir dir  with | _ -> raise Not_found;
+      in search_dir d_handle (List.cons) [] [] dir [".json"; ".diff"] |> List.iter delete_file
+    else
+      raise (Invalid_argument "Invalid arguments")
+  with
+  | Not_init -> print_endline "Please initialize your server first.";
+  | Already_init -> 
+    print_endline "This directory has already been initialized as a server working directory.";
+    print_endline "You can use \'camlsyncserver clean\' to clean up this direcotry."
+  | Invalid_argument _ -> 
+    print_endline "Invalid arguments.";
+    print_endline "usage: camlsyncserver [<init [token]> | <clean>]"
+
 let _ = main ()

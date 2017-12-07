@@ -188,6 +188,15 @@ type version_diff = {
   edited_files: file_diff list
 }
 
+type history = {
+  version: int;
+  timestamp: float
+}
+
+type hisotry_log = {
+  log: history list
+}
+
 exception File_existed of string
 exception File_not_found of string
 

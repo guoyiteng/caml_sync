@@ -29,7 +29,8 @@ val load_history: unit -> history_log
 (* [write_history log] writes logs to "history.json" file. *)
 val write_history: history_log -> unit
 
-(* [init token] initializes the caml_sync_server environment. It will create "config.json", "0.diff", and "history.json". *)
+(* [init token] initializes the caml_sync_server environment. It will create 
+ * "config.json", "0.diff", and "history.json". *)
 val init: string -> unit
 
 (* [calc_file_diffs_between_states state1 state2] returns a file_diff list between
@@ -52,7 +53,8 @@ val calc_diff_by_version: int -> int -> file_diff list
 val handle_get_current_version: App.builder
 
 (* Handle GET request at "/history".
- * returns: a json containing a list of version numbers and their corresponding time. *)
+ * returns: a json containing a list of version numbers and their corresponding 
+ * time. *)
 val handle_get_history_list: App.builder
 
 (* Handle POST request at "/diff".

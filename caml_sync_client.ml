@@ -124,16 +124,6 @@ let has_prefix_in_lst str_to_check lst_prefices =
        with | Invalid_argument _ -> acc
     ) false lst_prefices
 
-(* [contains s1 s2] checks if [s2] is a substring of [s1] *)
-let contains s1 s2 =
-  try
-    let len = String.length s2 in
-    for i = 0 to String.length s1 - len do
-      if String.sub s1 i len = s2 then raise Exit
-    done;
-    false
-  with Exit -> true
-
 (* [contains_local filename] checks whether [filename] contains "_local"
  * right before its extension *)
 let contains_local filename =
@@ -421,6 +411,11 @@ let () =
        let from_files = search_dir hidden_handle (List.cons) [] [] hidden_dir valid_extensions in
        let to_files = List.map (fun file -> replace_prefix file hidden_dir ".") from_files in
        copy_files from_files to_files
+     | "status" ->
+       compare_working_backup () |>
+       List.iter (fun {file_name; is_deleted}
+                   -> let f_status = if is_deleted then "deleted" else "modified" in
+                     print_endline (f_status ^ " : " ^  file_name))
      | _ ->
        print_endline "usage:\n\
                       caml_sync init <url> <token> ->\n\

@@ -171,7 +171,7 @@ let handle_get_current_version = get "/version" begin fun req ->
       `String ("Unauthorized Access") |> respond' ~code:`Unauthorized
   end
 
-let handle_get_history_list = post "/history" begin fun
+let handle_get_history_list = get "/history" begin fun
     req ->
     let config = load_config () in
     if verify_token req config then
@@ -214,30 +214,35 @@ let handle_get_diff_from_client = get "/diff" begin fun
     req ->
     let config = load_config () in
     if verify_token req config then
-      match "from" |> Uri.get_query_param (Request.uri req) with
-      | Some from_str -> begin
+      try
+        let parse_from_or_to from_or_to =
           let is_int s =
             try ignore (int_of_string s); true
             with _ -> false in
-          if is_int from_str then
-            let from = int_of_string from_str in
-            if from <= config.version
-            then
-              let v_diff = {
-                prev_version = from;
-                cur_version = config.version;
-                edited_files = calc_diff_by_version from config.version
-              } in
-              let json = build_version_diff_json v_diff in
-              `Json (
-                json
-              ) |> respond'
-            else
-              `String ("Parameter [from] is larger than the current version.") |> respond' ~code:`Bad_request
-          else
-            `String ("Parameter [from] is illegal.") |> respond' ~code:`Bad_request
-        end
-      | None -> `String ("Parameter [from] is required.") |> respond' ~code:`Bad_request
+          match from_or_to |> Uri.get_query_param (Request.uri req) with
+          | Some str -> 
+            if is_int str then int_of_string str
+            else if from_or_to = "from" then raise (Invalid_argument "Parameter [from] is illegal.")
+            else if from_or_to = "to" then raise (Invalid_argument "Parameter [to] is illegal.")
+            else raise (Server_error "parse_from_or_to only can parse from or to")
+          | None ->
+            if from_or_to = "from" then 0
+            else if from_or_to = "to" then config.version
+            else raise (Server_error "parse_from_or_to only can parse from or to") in
+        let from_v = parse_from_or_to "from" in
+        let to_v = parse_from_or_to "to" in
+        if from_v <= to_v then
+          let v_diff = {
+            prev_version = from_v;
+            cur_version = to_v;
+            edited_files = calc_diff_by_version from_v to_v
+          } in
+          `Json (build_version_diff_json v_diff) |> respond'
+        else
+          raise (Invalid_argument "Parameter [from] is larger than [to].")
+      with
+      | Invalid_argument s -> 
+        `String (s) |> respond' ~code:`Bad_request
     else
       `String ("Unauthorized Access") |> respond' ~code:`Unauthorized
   end
@@ -256,6 +261,7 @@ let main () =
         |> handle_get_current_version
         |> handle_post_diff_from_client
         |> handle_get_diff_from_client
+        |> handle_get_history_list
         |> App.run_command
       with
       | File_not_found msg ->

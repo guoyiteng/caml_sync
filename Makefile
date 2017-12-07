@@ -8,11 +8,8 @@ uninstall:
 	unlink /usr/local/bin/camlsyncserver
 server:
 	ocamlbuild -use-ocamlfind caml_sync_server.native
-	rm -f server/caml_sync_server.native
 client:
 	ocamlbuild -use-ocamlfind client_main.native
-	rm -f client/client_main.native
-	mv client_main.native client/client_main.native
 server_template:
 	ocamlbuild -use-ocamlfind server_template.native && ./server_template.native
 sync:
@@ -32,9 +29,9 @@ init:
 check:
 	bash checktypes.sh
 debug:
-	ocamlbuild -use-ocamlfind -tag 'debug' debug.byte
 	ocamlbuild -use-ocamlfind -tag 'debug' client_main.byte
 	rm -f client/client_main.byte
+	rm -f client2/client_main.byte
 	cp client_main.byte client/client_main.byte
 	mv client_main.byte client2/client_main.byte
 	ocamlbuild -use-ocamlfind -tag 'debug' caml_sync_server.byte

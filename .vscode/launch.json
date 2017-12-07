@@ -8,7 +8,7 @@
             "name": "OCaml",
             "type": "ocamldebug",
             "request": "launch",
-            "program": "${workspaceRoot}/client/caml_sync_client.byte",
+            "program": "${workspaceRoot}/client2/client_main.byte",
             "console": "internalConsole",
             "stopOnEntry": false
         }

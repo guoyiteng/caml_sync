@@ -9,6 +9,7 @@ module StrSet = Set.Make (String)
 exception Timeout
 exception Unauthorized
 exception ServerError of string
+exception Not_Initialized
 
 let hidden_dir = ".caml_sync"
 
@@ -39,11 +40,9 @@ let load_config () =
         version = get_int (List.assoc "version" dict);
       }
     with
-    | Not_found -> raise (File_not_found ".config")
+    | Not_found -> raise Not_Initialized
   with
-  | Sys_error e ->
-    print_endline ".config not found. Please initialize client first.";
-    exit 0
+  | Sys_error e -> raise Not_Initialized
 
 let update_config config =
   try
@@ -59,7 +58,7 @@ let update_config config =
     flush out
   with
   | _ ->
-    raise (File_not_found ".config")
+    raise Not_Initialized
 
 (* [get_all_filenames dir] returns a set of all the filenames
  * in directory [dir] or its subdirectories that are of approved suffixes *)
@@ -363,7 +362,7 @@ let init url token =
         | Some v ->
           if Sys.file_exists ".config" then
             print_endline "[.config] already exsits; it seems like the current directory\
-                           has update_configalready been initialized into a caml_sync client directory"
+                           has already been initialized into a caml_sync client directory"
           else
             let config = {
               client_id = "TODO";
@@ -376,9 +375,9 @@ let init url token =
             Unix.mkdir hidden_dir 0o770;
             sync ()
         | None ->
-          print_endline "The address you entered does not seem to be a valid caml_sync address"
+          raise (ServerError "The address you entered does not seem to be a valid caml_sync address")
       end
-    | _ -> print_endline "The address you entered does not seem to be a valid caml_sync address"
+    | _ -> raise (ServerError "The address you entered does not seem to be a valid caml_sync address")
 
 (* usage:
  *  caml_sync init <url> <token> ->
@@ -386,18 +385,21 @@ let init url token =
  *  caml_sync ->
  *    syncs files in local directories with files in server
 *)
-let () =
+let main () =
    if Array.length Sys.argv = 1 then
     sync ()
    else match Array.get Sys.argv 1 with
      | "init" ->
-       if (Array.length Sys.argv) = 4 then
-         Lwt_main.run (init (Array.get Sys.argv 2) (Array.get Sys.argv 3))
-       else Lwt_main.run (init "127.0.0.1:8080" "default")
+       begin try (
+         if (Array.length Sys.argv) = 4 then
+           Lwt_main.run (init (Array.get Sys.argv 2) (Array.get Sys.argv 3))
+         else Lwt_main.run (init "127.0.0.1:8080" "default") )
+         with Unix.Unix_error _ -> raise (ServerError "No Connection")
+       end
      | "clean" ->
        remove_dir_and_files ".caml_sync";
        begin try Sys.remove ".config" with
-         | Sys_error e -> ()
+         | Sys_error e -> raise Not_Initialized
        end
      | "checkout" ->
        let curr_handle =
@@ -407,7 +409,7 @@ let () =
        |> List.filter (fun file -> not (has_prefix_in_lst file unwanted_strs) )
        |> List.iter delete_file;
        let hidden_handle =
-         try Unix.opendir hidden_dir with | _ -> raise Not_found
+         try Unix.opendir hidden_dir with | _ -> raise Not_Initialized
        in
        let from_files = search_dir hidden_handle (List.cons) [] [] hidden_dir valid_extensions in
        let to_files = List.map (fun file -> replace_prefix file hidden_dir ".") from_files in
@@ -424,3 +426,10 @@ let () =
                       \tinits the current directory as a client directory\
                       caml_sync ->\n\
                       \tsyncs files in local directories with files in server"
+
+let () =
+  try main () with
+  | Unauthorized -> print_endline "Authorization Denied"
+  | Timeout -> print_endline "Request Timeout"
+  | ServerError e -> print_endline ("Server Error:\n"^e)
+  | Not_Initialized -> print_endline "Current directory has not been initialized"

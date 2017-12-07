@@ -8,23 +8,26 @@ module StrSet = Set.Make (String)
 
 exception Timeout
 exception Unauthorized
+exception Bad_request of string
 exception ServerError of string
 exception Not_Initialized
-exception Invalid_argument
 
 let week = ["Sun";"Mon";"Tue";"Wed";"Thu";"Fri";"Sat"]
 let month = ["Jan";"Feb";"Mar";"Apr";"May";"Jun";"Jul";"Aug";"Sep";"Oct";"Nov";"Dec"]
 
 let hidden_dir = ".caml_sync"
 
-let history_dir_prefix = "./history_version_"
+let history_dir_prefix = "./camlsync_history_version_"
 
 let valid_extensions = [".ml"; ".mli"; ".txt"]
 
 let unwanted_strs =
   ["." ^ Filename.dir_sep ^ hidden_dir ^ Filename.dir_sep;
    "." ^ Filename.dir_sep ^ ".config";
-    history_dir_prefix]
+   history_dir_prefix]
+
+let usage = "usage: camlsync [<init [url token]> | <clean> | <checkout> \
+             <status> | <history (num) | list | clean> | <conflict [clean]>]"
 
 type config = {
   client_id: string;
@@ -85,6 +88,7 @@ let post_local_diff config version_diff =
     >>= fun (resp, body) ->
     let code = resp |> Response.status |> Code.code_of_status in
     if code = 401 then raise Unauthorized
+    else if code = 400 then raise (Bad_request "Bad_request when posting local diff to the server.")
     else try (
       body |> Cohttp_lwt.Body.to_string >|= fun body ->
       match body |> from_string with
@@ -128,7 +132,7 @@ let has_prefix_in_lst str_to_check lst_prefices =
        try
          let sub_str = String.sub str_to_check 0 (String.length elem) in
          if sub_str = elem then true else acc
-       with | Invalid_argument -> acc
+       with | Invalid_argument _ -> acc
     ) false lst_prefices
 
 (* [contains_local filename] checks whether [filename] contains "_local"
@@ -147,7 +151,7 @@ let check_invalid_filename () =
   StrSet.fold
     (fun elem acc ->
        if has_prefix_in_lst elem unwanted_strs then acc (* skip this file *)
-       else if contains_local elem then true else acc) filenames_cur false
+       else if contains_local elem then StrSet.add elem acc else acc) filenames_cur StrSet.empty |> StrSet.elements
 
 let compare_working_backup () =
   let filenames_last_sync =
@@ -208,9 +212,13 @@ let copy_file from_name to_name =
   write_file to_name (read_file from_name)
 
 (* [copy_files from_names to_names] copy all files in [from_names] to
- * [to_names]. *)
+ * [to_names]. If some files in [from_names] do not exist, this function will 
+ * ignore them. *)
 let copy_files from_names to_names =
-  List.iter2 (fun f t -> copy_file f t) from_names to_names
+  List.iter2 (fun f t -> 
+      if Sys.file_exists f then 
+        copy_file f t
+    ) from_names to_names
 
 let backup_working_files () =
   let filenames_cur =
@@ -234,7 +242,7 @@ let remove_dir_and_files folder_name =
 (* [apply_v_diff_to_dir v_diff dir_prefix] applies the version_diff [v_diff] to
  * the directory indicated by dir_prefix
  * requires: the string for [dir_prefix] does not end with '/'
- *)
+*)
 let apply_v_diff_to_dir v_diff dir_prefix =
   List.iter (fun {file_name; is_deleted; content_diff} ->
       let f_name = replace_prefix file_name "." dir_prefix in
@@ -248,7 +256,7 @@ let apply_v_diff_to_dir v_diff dir_prefix =
             delete_file f_name;
             content'
           else [] in
-          Diff_Impl.apply_diff content content_diff |> write_file f_name
+        Diff_Impl.apply_diff content content_diff |> write_file f_name
     ) v_diff.edited_files
 
 let generate_client_version_diff server_diff =
@@ -275,8 +283,9 @@ let generate_client_version_diff server_diff =
    * directory to hidden directory. *)
   backup_working_files ();
   (* if there is not a hidden dir, create one *)
-  if not (Sys.is_directory hidden_dir) then
-    Unix.mkdir hidden_dir 0o770;
+  if not (Sys.file_exists hidden_dir) then
+    Unix.mkdir hidden_dir 0o770
+  else ();
   (* 7. remove files in both_modified_list from local_diff
    * and return the resulting version_diff *)
   let return_files_diff = List.filter (fun {file_name} ->
@@ -298,6 +307,7 @@ let get_update_diff config =
     >>= fun (resp, body) ->
     let code = resp |> Response.status |> Code.code_of_status in
     if code = 401 then raise Unauthorized
+    else if code = 400 then raise (Bad_request "Bad_request when getting diff from the server.")
     else
       try (
         body |> Cohttp_lwt.Body.to_string >|= fun body ->
@@ -329,20 +339,21 @@ let history_list config =
 
 let time_travel config v =
   let new_dir = history_dir_prefix ^ (string_of_int v) in
-  if Sys.is_directory new_dir then begin
+  if Sys.file_exists new_dir then begin
     remove_dir_and_files new_dir;
-    print_endline (new_dir^" deleted.");
+    print_endline (new_dir ^ " is refreshed.");
   end;
   let open Uri in
   let uri = Uri.of_string  ("//"^config.url) in
-  let uri = with_path uri "history" in
+  let uri = with_path uri "diff" in
   let uri = with_scheme uri (Some "http") in
   let uri = Uri.add_query_param' uri ("token", config.token) in
   let uri = Uri.add_query_param' uri ("to", string_of_int v) in
-  let request = Client.post uri
+  let request = Client.get uri
     >>= fun (resp, body) ->
     let code = resp |> Response.status |> Code.code_of_status in
     if code = 401 then raise Unauthorized
+    else if code = 400 then raise (Bad_request "Bad_request when getting history version from the server.")
     else try (
       body |> Cohttp_lwt.Body.to_string >|= fun body ->
       let version_diff = body |> from_string |> parse_version_diff_json in
@@ -351,30 +362,28 @@ let time_travel config v =
   in Lwt_main.run (Lwt.pick [request; timeout ()])
 
 let sync () =
-  print_endline "Loading [.config]...";
   let config = load_config () in
-  print_endline "Successfully loaded [.config].";
-  if check_invalid_filename () then
-    print_endline "Please resolve local merge conflict before syncing with the server.\n"
+  if check_invalid_filename () <> [] then
+    print_endline "Please resolve local merge conflict before syncing with the server."
   else
     let print_modified m_list =
       if m_list = [] then ()
-      else
+      else begin
         print_endline "Following file(s) have sync conflicts with the server:";
         List.iter (
           fun (file, deleted)->
             if deleted then
-              print_endline (file^" - deleted")
+              print_endline ("# " ^ file ^ " - deleted")
             else
-              print_endline file
+              print_endline ("# " ^ file)
         ) m_list;
-      print_endline "These files have been renamed to [_local].";
-      if List.exists (fun (_,deleted) -> deleted) m_list then
-        print_endline "Files with [- deleted] appended have updates \
-                       from the server, yet are deleted locally and are not \
-                       renamed with the [_local] prefix. Please delete them again \
-                       if you still wish to do so."
-      else ()
+        print_endline "These files have been renamed to [*_local].";
+        if List.exists (fun (_,deleted) -> deleted) m_list then
+          print_endline "Files with [- deleted] appended have updates \
+                         from the server, yet are deleted locally and are not \
+                         renamed with the [*_local] suffix. Please delete them again \
+                         if you still wish to do so."
+      end
     in
     match get_update_diff config with
     | (m_list, []) ->
@@ -410,17 +419,15 @@ let init url token =
     raise (ServerError "unexpected response code")
   else
     body |> Cohttp_lwt.Body.to_string >|= fun body ->
-    print_endline body;
     match (from_string body) with
     | `O (json) ->
       begin match List.assoc_opt "version" json with
         | Some v ->
           if Sys.file_exists ".config" then
-            print_endline "[.config] already exsits; it seems like the current directory\
-                           has already been initialized into a caml_sync client directory"
+            print_endline ("[.config] already exsits.\n" ^ "It seems like the current directory has already been initialized into a camlsync client directory.")
           else
             let config = {
-              client_id = "TODO";
+              client_id = "client";
               url = url;
               token = token;
               version = 0
@@ -428,11 +435,33 @@ let init url token =
             update_config config;
             remove_dir_and_files hidden_dir;
             Unix.mkdir hidden_dir 0o770;
+            print_endline ("Successfully initialize the camlsync client.");
             sync ()
         | None ->
           raise (ServerError "The address you entered does not seem to be a valid caml_sync address")
       end
     | _ -> raise (ServerError "The address you entered does not seem to be a valid caml_sync address")
+
+let delete_all_local_files () =
+  let dir = "." in
+  let d_handle = Unix.opendir dir in
+  let set = search_dir d_handle StrSet.add StrSet.empty [] dir (List.map (fun ele -> "_local" ^ ele) valid_extensions) in
+  StrSet.iter (fun ele -> delete_file ele) set
+
+
+let delete_history_folders () =
+  let rec delete_history_folder dir = 
+    match Unix.readdir dir with
+    | exception End_of_file -> ()
+    | p_name ->  
+      let rela_name = "./" ^ p_name in
+      (if has_prefix_in_lst rela_name [history_dir_prefix] then
+         remove_dir_and_files rela_name
+       else ());
+      delete_history_folder dir in
+  let dir = Unix.opendir "." in
+  delete_history_folder dir;
+  Unix.closedir dir
 
 (* usage:
  *  caml_sync init <url> <token> ->
@@ -441,8 +470,9 @@ let init url token =
  *    syncs files in local directories with files in server
 *)
 let main () =
-   if Array.length Sys.argv = 1 then
+  if Array.length Sys.argv = 1 then
     sync ()
+<<<<<<< HEAD
    else match Array.get Sys.argv 1 with
      | "init" ->
        begin try (
@@ -505,12 +535,99 @@ let main () =
        print_endline "usage: camlsync [<init [url token]> | <clean> | <checkout> \
                       <status> | <history> { <list> | <num> }]"
      | _ -> raise Invalid_argument
+=======
+  else match Array.get Sys.argv 1 with
+    | "init" ->
+      begin try (
+        if (Array.length Sys.argv) = 4 then
+          Lwt_main.run (init (Array.get Sys.argv 2) (Array.get Sys.argv 3))
+        else Lwt_main.run (init "127.0.0.1:8080" "default") )
+        with Unix.Unix_error _ -> raise (ServerError "Cannot connect to the server.")
+      end
+    | "clean" ->
+      begin try Sys.remove ".config";
+          remove_dir_and_files ".caml_sync";
+          delete_all_local_files ();
+          delete_history_folders () with
+      | Sys_error e -> raise Not_Initialized
+      end;
+      print_endline "All local conflict files, history version folders, camlsync hidden files and folders have been removed."
+    | "checkout" ->
+      let curr_handle =
+        try Unix.opendir "." with | _ -> raise Not_found
+      in
+      search_dir curr_handle (List.cons) [] [] "." valid_extensions
+      |> List.filter (fun file -> not (has_prefix_in_lst file unwanted_strs) )
+      |> List.iter delete_file;
+      let hidden_handle =
+        try Unix.opendir hidden_dir with | _ -> raise Not_Initialized
+      in
+      let from_files = search_dir hidden_handle (List.cons) [] [] hidden_dir valid_extensions in
+      let to_files = List.map (fun file -> replace_prefix file hidden_dir ".") from_files in
+      copy_files from_files to_files
+    | "status" ->
+      let cur_version = (load_config ()).version in
+      let f_diffs = compare_working_backup () in
+      print_endline ("Current version: " ^ (string_of_int cur_version));
+      if List.length f_diffs = 0 then print_endline "working directory clean "
+      else List.iter (fun {file_name; is_deleted}
+                       -> let f_status = if is_deleted then "deleted" else "modified" in
+                         print_endline (f_status ^ " : " ^  file_name)) f_diffs
+    | "history" ->
+      let fmt timestamp =
+        let open Unix in
+        let tm = timestamp |> localtime in
+        (string_of_int (tm.tm_year+1900))^" "^
+        (List.nth month tm.tm_mon)^" "^(string_of_int tm.tm_mday)^" "^
+        (List.nth week tm.tm_wday)^" "^
+        (string_of_int tm.tm_hour)^":"^(string_of_int tm.tm_min) in
+      if (Array.get Sys.argv 2) = "list" then
+      (* TODO: version 0 should be removed *)
+        let history_log = (history_list (load_config ())) in
+        List.iter
+          (fun (hist:history):unit -> print_endline
+              (
+                "Version: "^(string_of_int hist.version)
+                ^"; Time: "^(fmt hist.timestamp)
+              )
+          )
+          history_log.log
+      else if Sys.argv.(2) = "clean" then
+        (delete_history_folders ();
+         print_endline "All history version folders have been removed.")
+      else
+        let v =
+          try int_of_string (Array.get Sys.argv 2)
+          with _ -> raise (Invalid_argument "The version number must be an integer which is larger than or equal to 1.")
+        in
+        if v < 1 then raise (Invalid_argument "The version number must be an integer which is larger than or equal to 1.")
+        else time_travel (load_config ()) v
+        (* TODO: add printout *)
+    | "help" ->
+      print_endline usage
+    | "conflict" ->
+      if Array.length Sys.argv = 2 then
+        let conflicts = check_invalid_filename () in
+        if conflicts = [] then
+          print_endline "There is nothing conflict."
+        else
+          begin
+            print_endline "Following file(s) have sync conflicts with the server:";
+            List.iter (fun ele -> print_endline ("# " ^ ele) ) conflicts
+          end
+      else if Array.length Sys.argv = 3 && Sys.argv.(2) = "clean"
+      then begin delete_all_local_files ();
+        print_endline "All local conflict files have been removed." end
+      else raise (Invalid_argument ("Invalid arguments.\n" ^ usage))
+    | _ -> raise (Invalid_argument ("Invalid arguments.\n" ^ usage))
+>>>>>>> 43c80a192bb7384977d8170c3d01ae62e58cbd68
 
 let () =
   try main () with
-  | Unauthorized -> print_endline "Authorization Denied"
-  | Timeout -> print_endline "Request Timeout"
-  | ServerError e -> print_endline ("Server Error:\n"^e)
-  | Not_Initialized -> print_endline "Current directory has not been initialized"
-  | Unix.Unix_error _ -> print_endline ("Server Error:\nNo Connection")
-  | Invalid_argument -> print_endline "Invalid argument"
+  | Unauthorized -> print_endline ("Your token is wrong.\n" ^ "Please run 'camlsync clean' and 'camlsync init <url> <token>' to reinitialize your server.")
+  | Timeout -> print_endline "Your request is time out."
+  | Unix.Unix_error _  
+  | ServerError _ -> print_endline ("Cannot connect to the server." ^ "\nPlease double check your server address and make sure your server is running.")
+  | Bad_request s -> print_endline s
+  | Not_Initialized -> print_endline "Current directory has not been initialized."
+  | Invalid_argument s -> print_endline s

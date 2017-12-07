@@ -70,6 +70,20 @@ assert "! -e 2.txt" $LINENO
 camlsync checkout
 assert "-e 1.txt" $LINENO
 assert "-e 2.txt" $LINENO
+echo "hello boi" >> 4.txt
+echo "bruh" >> 1.txt
+assert "-e 4.txt" $LINENO
+camlsync checkout
+assert "$(cat 1.txt)=1" $LINENO
+
+# test status
+assert [ "$(camlsync status)"=="working directory clean" ] $LINENO
+rm 1.txt
+assert [ "$(camlsync status)"=="deleted: 1.txt" ] $LINENO
+camlsync checkout
+echo "bruh" >> 1.txt
+assert [ "$(camlsync status)"=="modified: 1.txt" ] $LINENO
+
 
 
 cd ~/Documents/CS/Cornell/CS\ 3110/final

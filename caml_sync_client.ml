@@ -517,10 +517,10 @@ let main () =
       let cur_version = (load_config ()).version in
       let f_diffs = compare_working_backup () in
       print_endline ("Current version: " ^ (string_of_int cur_version));
-      if List.length f_diffs = 0 then print_endline "working directory clean "
+      if List.length f_diffs = 0 then print_endline "working directory clean"
       else List.iter (fun {file_name; is_deleted}
                        -> let f_status = if is_deleted then "deleted" else "modified" in
-                         print_endline (f_status ^ " : " ^  file_name)) f_diffs
+                         print_endline (f_status ^ ": " ^  file_name)) f_diffs
     | "history" ->
       let fmt timestamp =
         let open Unix in

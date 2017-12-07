@@ -165,24 +165,24 @@ let compare_working_backup () =
     (* all files in working directory *)
     StrSet.fold
       (fun f_name acc -> (compare_file f_name)::acc) filenames_cur []
-  in let total_files_diff_lst =
-       (* all files in sync directory but not in working direcoty.
-        * These files have been removed after the last update *)
-       let trans_filenames_last_sync =
-         (* map every string in filenames_last_sync to a new string with "."
-          * as prefix rather than hidden_dir *)
-         StrSet.map
-           (fun str -> replace_prefix str hidden_dir ".") filenames_last_sync in
-       let deleted_files =
-         StrSet.diff trans_filenames_last_sync filenames_last_sync in
-       StrSet.fold
-         (fun f_name acc ->
-            {
-              file_name = f_name;
-              is_deleted = true;
-              content_diff = Diff_Impl.calc_diff [] []
-            }::acc) deleted_files working_files_diff_lst in
-  List.filter (fun {content_diff} -> content_diff <> Diff_Impl.empty) total_files_diff_lst
+    |> List.filter (fun {content_diff} -> content_diff <> Diff_Impl.empty)
+  in
+  (* all files in sync directory but not in working direcoty.
+   * These files have been removed after the last update *)
+  let trans_filenames_last_sync =
+    (* map every string in filenames_last_sync to a new string with "."
+     * as prefix rather than hidden_dir *)
+    StrSet.map
+      (fun str -> replace_prefix str hidden_dir ".") filenames_last_sync in
+  let deleted_files =
+    StrSet.diff trans_filenames_last_sync filenames_cur in      
+  StrSet.fold
+    (fun f_name acc ->
+       {
+         file_name = f_name;
+         is_deleted = true;
+         content_diff = Diff_Impl.calc_diff [] []
+       }::acc) deleted_files working_files_diff_lst
 
 let check_both_modified_files modified_file_diffs version_diff =
   let server_diff_files = version_diff.edited_files in
@@ -313,6 +313,14 @@ let get_update_diff config =
         body |> Cohttp_lwt.Body.to_string >|= fun body ->
         let diff = body |> from_string |> parse_version_diff_json in
         update_config {config with version=diff.cur_version};
+        begin
+          if config.version = diff.cur_version 
+          then
+            print_endline "Already the latest version."
+          else
+            print_endline ("Fetch from the server and update to version " 
+                           ^ (string_of_int diff.cur_version) ^ ".")
+        end;
         generate_client_version_diff diff
       )
       with
@@ -385,6 +393,7 @@ let sync () =
                          if you still wish to do so."
       end
     in
+    print_endline "Sync...";
     match get_update_diff config with
     | (m_list, []) ->
       print_modified m_list
@@ -396,13 +405,12 @@ let sync () =
         edited_files = diff_list;
       } in
       let new_v = post_local_diff config version_diff in
-      update_config {config with version=new_v}
+      print_endline "Push local updates to the server.";
+      update_config {config with version=new_v};
+      print_endline ("Update current version to " ^ (string_of_int new_v) ^ ".")
 
 let init url token =
-  (* TODO: should not insert token directly *)
   (* Makes a dummy call to check if the url is a caml_sync server *)
-  (* let uri = (Uri.add_query_param' (Uri.of_string (url^"/version")) ("token", token))  in
-     let () = print_endline (Uri.to_string uri) in *)
   let open Uri in
   let uri = Uri.of_string  ("//"^url) in
   let uri = with_path uri "version" in
@@ -473,7 +481,8 @@ let delete_history_folders () =
 *)
 let main () =
   if Array.length Sys.argv = 1 then
-    sync ()
+    ignore(compare_working_backup ())
+    (* sync () *)
   else match Array.get Sys.argv 1 with
     | "init" ->
       begin try (
@@ -541,8 +550,8 @@ let main () =
         in
         if v < 1 then raise (Invalid_argument "The version number must be an integer which is larger than or equal to 1.")
         else begin time_travel (load_config ()) v;
-        let v_s = Array.get Sys.argv 2 in
-        print_endline ("Download your version " ^ v_s ^ " backup to ./camlsync_history_version_" ^ v_s ^ ".") end
+          let v_s = Array.get Sys.argv 2 in
+          print_endline ("Download your version " ^ v_s ^ " backup to ./camlsync_history_version_" ^ v_s ^ ".") end
       else raise (Invalid_argument ("Invalid arguments.\n" ^ usage))
     | "help" ->
       print_endline usage

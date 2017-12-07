@@ -24,7 +24,7 @@ let valid_extensions = [".ml"; ".mli"; ".txt"]
 let unwanted_strs =
   ["." ^ Filename.dir_sep ^ hidden_dir ^ Filename.dir_sep;
    "." ^ Filename.dir_sep ^ ".config";
-    history_dir_prefix]
+   history_dir_prefix]
 
 type config = {
   client_id: string;
@@ -234,7 +234,7 @@ let remove_dir_and_files folder_name =
 (* [apply_v_diff_to_dir v_diff dir_prefix] applies the version_diff [v_diff] to
  * the directory indicated by dir_prefix
  * requires: the string for [dir_prefix] does not end with '/'
- *)
+*)
 let apply_v_diff_to_dir v_diff dir_prefix =
   List.iter (fun {file_name; is_deleted; content_diff} ->
       let f_name = replace_prefix file_name "." dir_prefix in
@@ -248,7 +248,7 @@ let apply_v_diff_to_dir v_diff dir_prefix =
             delete_file f_name;
             content'
           else [] in
-          Diff_Impl.apply_diff content content_diff |> write_file f_name
+        Diff_Impl.apply_diff content content_diff |> write_file f_name
     ) v_diff.edited_files
 
 let generate_client_version_diff server_diff =
@@ -275,8 +275,9 @@ let generate_client_version_diff server_diff =
    * directory to hidden directory. *)
   backup_working_files ();
   (* if there is not a hidden dir, create one *)
-  if not (Sys.is_directory hidden_dir) then
-    Unix.mkdir hidden_dir 0o770;
+  if not (Sys.file_exists hidden_dir) then
+    Unix.mkdir hidden_dir 0o770
+  else ();
   (* 7. remove files in both_modified_list from local_diff
    * and return the resulting version_diff *)
   let return_files_diff = List.filter (fun {file_name} ->
@@ -329,17 +330,17 @@ let history_list config =
 
 let time_travel config v =
   let new_dir = history_dir_prefix ^ (string_of_int v) in
-  if Sys.is_directory new_dir then begin
+  if Sys.file_exists new_dir then begin
     remove_dir_and_files new_dir;
     print_endline (new_dir^" deleted.");
   end;
   let open Uri in
   let uri = Uri.of_string  ("//"^config.url) in
-  let uri = with_path uri "history" in
+  let uri = with_path uri "diff" in
   let uri = with_scheme uri (Some "http") in
   let uri = Uri.add_query_param' uri ("token", config.token) in
   let uri = Uri.add_query_param' uri ("to", string_of_int v) in
-  let request = Client.post uri
+  let request = Client.get uri
     >>= fun (resp, body) ->
     let code = resp |> Response.status |> Code.code_of_status in
     if code = 401 then raise Unauthorized
@@ -361,13 +362,13 @@ let sync () =
       if m_list = [] then ()
       else
         print_endline "Following file(s) have sync conflicts with the server:";
-        List.iter (
-          fun (file, deleted)->
-            if deleted then
-              print_endline (file^" - deleted")
-            else
-              print_endline file
-        ) m_list;
+      List.iter (
+        fun (file, deleted)->
+          if deleted then
+            print_endline (file^" - deleted")
+          else
+            print_endline file
+      ) m_list;
       print_endline "These files have been renamed to [_local].";
       if List.exists (fun (_,deleted) -> deleted) m_list then
         print_endline "Files with [- deleted] appended have updates \
@@ -441,70 +442,70 @@ let init url token =
  *    syncs files in local directories with files in server
 *)
 let main () =
-   if Array.length Sys.argv = 1 then
+  if Array.length Sys.argv = 1 then
     sync ()
-   else match Array.get Sys.argv 1 with
-     | "init" ->
-       begin try (
-         if (Array.length Sys.argv) = 4 then
-           Lwt_main.run (init (Array.get Sys.argv 2) (Array.get Sys.argv 3))
-         else Lwt_main.run (init "127.0.0.1:8080" "default") )
-         with Unix.Unix_error _ -> raise (ServerError "No Connection")
-       end
-     | "clean" ->
-       remove_dir_and_files ".caml_sync";
-       begin try Sys.remove ".config" with
-         | Sys_error e -> raise Not_Initialized
-       end
-     | "checkout" ->
-       let curr_handle =
-         try Unix.opendir "." with | _ -> raise Not_found
-       in
-       search_dir curr_handle (List.cons) [] [] "." valid_extensions
-       |> List.filter (fun file -> not (has_prefix_in_lst file unwanted_strs) )
-       |> List.iter delete_file;
-       let hidden_handle =
-         try Unix.opendir hidden_dir with | _ -> raise Not_Initialized
-       in
-       let from_files = search_dir hidden_handle (List.cons) [] [] hidden_dir valid_extensions in
-       let to_files = List.map (fun file -> replace_prefix file hidden_dir ".") from_files in
-       copy_files from_files to_files
-     | "status" ->
-       let cur_version = (load_config ()).version in
-       let f_diffs = compare_working_backup () in
-       print_endline ("Current version: " ^ (string_of_int cur_version));
-       if List.length f_diffs = 0 then print_endline "working directory clean "
-       else List.iter (fun {file_name; is_deleted}
-                   -> let f_status = if is_deleted then "deleted" else "modified" in
-                     print_endline (f_status ^ " : " ^  file_name)) f_diffs
-     | "history" ->
-       let fmt timestamp =
-         let open Unix in
-         let tm = timestamp |> localtime in
-         (string_of_int (tm.tm_year+1900))^" "^
-         (List.nth month tm.tm_mon)^" "^(string_of_int tm.tm_mday)^" "^
-         (List.nth week tm.tm_wday)^" "^
-         (string_of_int tm.tm_hour)^":"^(string_of_int tm.tm_min) in
-       if (Array.get Sys.argv 2) = "list" then
-         let history_log = (history_list (load_config ())) in
-         List.iter
-           (fun (hist:history):unit -> print_endline
-               (
-                 "Version: "^(string_of_int hist.version)
-                 ^"; Time: "^(fmt hist.timestamp)
-               )
-           )
-           history_log.log
-       else
-         let v =
-           try int_of_string (Array.get Sys.argv 2)
-           with _ -> raise Invalid_argument
-         in
-         time_travel (load_config ()) v
-     | "help" ->
-       print_endline "usage: camlsync [<init [url token]> | <clean> | <checkout> \
-                      <status> | <history>]"
-     | _ -> raise Invalid_argument
+  else match Array.get Sys.argv 1 with
+    | "init" ->
+      begin try (
+        if (Array.length Sys.argv) = 4 then
+          Lwt_main.run (init (Array.get Sys.argv 2) (Array.get Sys.argv 3))
+        else Lwt_main.run (init "127.0.0.1:8080" "default") )
+        with Unix.Unix_error _ -> raise (ServerError "No Connection")
+      end
+    | "clean" ->
+      remove_dir_and_files ".caml_sync";
+      begin try Sys.remove ".config" with
+        | Sys_error e -> raise Not_Initialized
+      end
+    | "checkout" ->
+      let curr_handle =
+        try Unix.opendir "." with | _ -> raise Not_found
+      in
+      search_dir curr_handle (List.cons) [] [] "." valid_extensions
+      |> List.filter (fun file -> not (has_prefix_in_lst file unwanted_strs) )
+      |> List.iter delete_file;
+      let hidden_handle =
+        try Unix.opendir hidden_dir with | _ -> raise Not_Initialized
+      in
+      let from_files = search_dir hidden_handle (List.cons) [] [] hidden_dir valid_extensions in
+      let to_files = List.map (fun file -> replace_prefix file hidden_dir ".") from_files in
+      copy_files from_files to_files
+    | "status" ->
+      let cur_version = (load_config ()).version in
+      let f_diffs = compare_working_backup () in
+      print_endline ("Current version: " ^ (string_of_int cur_version));
+      if List.length f_diffs = 0 then print_endline "working directory clean "
+      else List.iter (fun {file_name; is_deleted}
+                       -> let f_status = if is_deleted then "deleted" else "modified" in
+                         print_endline (f_status ^ " : " ^  file_name)) f_diffs
+    | "history" ->
+      let fmt timestamp =
+        let open Unix in
+        let tm = timestamp |> localtime in
+        (string_of_int (tm.tm_year+1900))^" "^
+        (List.nth month tm.tm_mon)^" "^(string_of_int tm.tm_mday)^" "^
+        (List.nth week tm.tm_wday)^" "^
+        (string_of_int tm.tm_hour)^":"^(string_of_int tm.tm_min) in
+      if (Array.get Sys.argv 2) = "list" then
+        let history_log = (history_list (load_config ())) in
+        List.iter
+          (fun (hist:history):unit -> print_endline
+              (
+                "Version: "^(string_of_int hist.version)
+                ^"; Time: "^(fmt hist.timestamp)
+              )
+          )
+          history_log.log
+      else
+        let v =
+          try int_of_string (Array.get Sys.argv 2)
+          with _ -> raise Invalid_argument
+        in
+        time_travel (load_config ()) v
+    | "help" ->
+      print_endline "usage: camlsync [<init [url token]> | <clean> | <checkout> \
+                     <status> | <history>]"
+    | _ -> raise Invalid_argument
 
 let () =
   try main () with

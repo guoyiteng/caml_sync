@@ -268,12 +268,9 @@ let generate_client_version_diff server_diff =
   (* 6. call backup_working_files to copy everything from local
    * directory to hidden directory. *)
   backup_working_files ();
-  begin
-    try
-      Unix.mkdir hidden_dir 0o770
-    with
-    | Unix.Unix_error _ -> ()
-  end;
+  (* if there is not a hidden dir, create one *)
+  if not (Sys.is_directory hidden_dir) then
+    Unix.mkdir hidden_dir 0o770;
   (* 7. remove files in both_modified_list from local_diff
    * and return the resulting version_diff *)
   let return_files_diff = List.filter (fun {file_name} ->

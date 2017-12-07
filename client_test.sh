@@ -28,7 +28,7 @@ mkdir client_boi2
 mkdir server_boi
 cd server_boi
 camlsyncserver init
-nohup camlsyncserver 2>&1 &
+camlsyncserver 2>&1 & > nohup.out
 cd ../client_boi
 camlsync init
 # check if init is successful

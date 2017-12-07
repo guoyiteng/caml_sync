@@ -295,7 +295,8 @@ let rec recursively_rm_dir rev_lst =
 
 let delete_file filename =
   (* rev_lst_split contains the separate path fields *)
-  let rev_lst_split = String.split_on_char '/' filename |> List.rev |> List.tl in
+  let rev_lst_split = 
+    String.split_on_char '/' filename |> List.rev |> List.tl in
   try Sys.remove filename; recursively_rm_dir rev_lst_split
   with Sys_error _ -> raise (File_not_found "Cannot remove file.")
 
@@ -317,7 +318,8 @@ let rec search_dir dir_handle add acc_file acc_dir dir_name valid_exts =
        * after having seen all files in the current directory *)
       search_dir dir_handle add acc_file (path::acc_dir) dir_name valid_exts
       (* support suffix here in addition to extension. *)
-    else if List.exists (fun suff -> Filename.check_suffix p_name suff) valid_exts then
+    else if List.exists 
+        (fun suff -> Filename.check_suffix p_name suff) valid_exts then
       let new_fileset = add path acc_file in
       search_dir dir_handle add new_fileset acc_dir dir_name valid_exts
     else search_dir dir_handle add acc_file acc_dir dir_name valid_exts

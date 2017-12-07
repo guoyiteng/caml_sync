@@ -6,8 +6,6 @@ exception Not_init
 exception Already_init
 exception Server_error of string
 
-type version = int
-
 type config = {
   server_id: string;
   url: string;
@@ -30,9 +28,9 @@ let default_config = {
   version = 0;
 }
 
+(* RWLock to synchronize between each request. *)
 let lock = Rwlock.create ()
 
-(* [write_config c] writes server config [c] to "config.json". *)
 let write_config c =
   let open Ezjsonm in
   dict ["server_id", (string c.server_id);

@@ -14,17 +14,23 @@ val init: string -> unit
 (* [load_config _] loads the configuration of server if there's already a
  * configuration created for the server.
  * requires: ".config" must exist in the current directory.
- *)
+*)
 val load_config: unit -> config
 
 (* [write_config c] writes server config [c] to "config.json". *)
 val write_config: config -> unit
 
+(* [init_history ()] initializes "history.json" file in the server.  *)
 val init_history: unit -> unit
 
+(* [load_history ()] loads "history.json" file in the server. *)
 val load_history: unit -> history_log
 
+(* [write_history log] writes logs to "history.json" file. *)
 val write_history: history_log -> unit
+
+(* [init token] initializes the caml_sync_server environment. It will create "config.json", "0.diff", and "history.json". *)
+val init: string -> unit
 
 (* [calc_file_diffs_between_states state1 state2] returns a file_diff list between
  * [state1] and [state2]. [state1] is the base state and [state2] is the new
@@ -45,7 +51,9 @@ val calc_diff_by_version: int -> int -> file_diff list
  * returns: a json containing [cur_version] to the client. *)
 val handle_get_current_version: App.builder
 
-val handle_post_diff_from_client: App.builder
+(* Handle GET request at "/history".
+ * returns: a json containing a list of version numbers and their corresponding time. *)
+val handle_get_history_list: App.builder
 
 (* Handle POST request at "/diff".
  * accepts: the diff json representing the difference between the client's
@@ -67,5 +75,5 @@ val handle_get_diff_from_client: App.builder
  *    initializes the current directory as a server directory
  *  caml_sync_server ->
  *    runs the server
- *)
- val main : unit -> unit
+*)
+val main : unit -> unit

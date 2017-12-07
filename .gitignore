@@ -1,6 +1,8 @@
 server/
 client/
 client2/
+.config
+.caml_sync/
 
 *.annot
 *.cmo

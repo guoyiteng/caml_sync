@@ -175,7 +175,7 @@ let compare_working_backup () =
     StrSet.map
       (fun str -> replace_prefix str hidden_dir ".") filenames_last_sync in
   let deleted_files =
-    StrSet.diff trans_filenames_last_sync filenames_cur in      
+    StrSet.diff trans_filenames_last_sync filenames_cur in
   StrSet.fold
     (fun f_name acc ->
        {
@@ -314,11 +314,11 @@ let get_update_diff config =
         let diff = body |> from_string |> parse_version_diff_json in
         update_config {config with version=diff.cur_version};
         begin
-          if config.version = diff.cur_version 
+          if config.version = diff.cur_version
           then
             print_endline "Already the latest version."
           else
-            print_endline ("Fetch from the server and update to version " 
+            print_endline ("Fetch from the server and update to version "
                            ^ (string_of_int diff.cur_version) ^ ".")
         end;
         generate_client_version_diff diff
@@ -416,6 +416,7 @@ let init url token =
   let uri = with_path uri "version" in
   let uri = with_scheme uri (Some "http") in
   let uri = Uri.add_query_param' uri ("token", token) in
+  let request =
   Client.get uri >>= fun (resp, body) ->
   let code = resp |> Response.status |> Code.code_of_status in
   (* First checks if pass token test by the response status code *)
@@ -433,7 +434,7 @@ let init url token =
         | Some v ->
           if Sys.file_exists ".config" then
             print_endline ("[.config] already exsits.\n" ^
-                           "It seems like the current directory has already been\
+                           "It seems like the current directory has already been \
                             initialized into a camlsync client directory.")
           else
             let config = {
@@ -451,6 +452,7 @@ let init url token =
           raise (ServerError "The address you entered does not seem to be a valid caml_sync address")
       end
     | _ -> raise (ServerError "The address you entered does not seem to be a valid caml_sync address")
+  in Lwt_main.run (Lwt.pick [request; timeout ()])
 
 let delete_all_local_files () =
   let dir = "." in
@@ -486,8 +488,8 @@ let main () =
     | "init" ->
       begin try (
         if (Array.length Sys.argv) = 4 then
-          Lwt_main.run (init (Array.get Sys.argv 2) (Array.get Sys.argv 3))
-        else Lwt_main.run (init "127.0.0.1:8080" "default") )
+          init (Array.get Sys.argv 2) (Array.get Sys.argv 3)
+        else init "127.0.0.1:8080" "default" )
         with Unix.Unix_error _ -> raise (ServerError "Cannot connect to the server.")
       end
     | "clean" ->

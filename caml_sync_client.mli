@@ -88,7 +88,7 @@ val time_travel : config -> int -> unit
 (* [init url token] creates a hidden ".config" file and stores [url] and [token]
  * in ".config". It also creates a folder ".caml_sync/" in the current directory.
  * Users can change this [url] and [token] manually in ".config". *)
-val init : string -> string -> unit Lwt.t
+val init : string -> string -> unit
 
 (* Performs all the sync work *)
 val sync : unit -> unit

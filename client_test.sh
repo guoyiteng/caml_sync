@@ -55,12 +55,14 @@ assert "! -e 1.txt" $LINENO
 echo "1" >> 1.txt
 echo "2" >> 2.txt
 echo "3" >> 3.txt
+touch hello.txt
 camlsync
 cd ../client_boi2
 camlsync
 assert "-e 1.txt" $LINENO
 assert "-e 2.txt" $LINENO
 assert "-e 3.txt" $LINENO
+assert "-e hello.txt"$LINENO
 
 # test checkout 
 rm 1.txt

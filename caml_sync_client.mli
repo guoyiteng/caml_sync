@@ -7,6 +7,12 @@ type config = {
   version: int;
 }
 
+exception Timeout
+exception Unauthorized
+exception Bad_request of string
+exception ServerError of string
+exception Not_Initialized
+
 (* [load_config () ] loads the config file of client *)
 val load_config : unit -> config
 
@@ -86,3 +92,7 @@ val init : string -> string -> unit Lwt.t
 
 (* Performs all the sync work *)
 val sync : unit -> unit
+
+(* Top level of client
+ *)
+val main : unit -> unit

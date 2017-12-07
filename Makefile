@@ -47,5 +47,8 @@ dependencies:
 	opam update
 	opam install opium ezjsonm cohttp
 test:
+	rm -rf .config .caml_sync config.json history.json *.diff
 	ocamlbuild -use-ocamlfind client_test.byte
 	./client_test.byte
+	ocamlbuild -use-ocamlfind core_test.byte
+	./core_test.byte

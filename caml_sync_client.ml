@@ -212,11 +212,11 @@ let copy_file from_name to_name =
   write_file to_name (read_file from_name)
 
 (* [copy_files from_names to_names] copy all files in [from_names] to
- * [to_names]. If some files in [from_names] do not exist, this function will 
+ * [to_names]. If some files in [from_names] do not exist, this function will
  * ignore them. *)
 let copy_files from_names to_names =
-  List.iter2 (fun f t -> 
-      if Sys.file_exists f then 
+  List.iter2 (fun f t ->
+      if Sys.file_exists f then
         copy_file f t
     ) from_names to_names
 
@@ -424,7 +424,9 @@ let init url token =
       begin match List.assoc_opt "version" json with
         | Some v ->
           if Sys.file_exists ".config" then
-            print_endline ("[.config] already exsits.\n" ^ "It seems like the current directory has already been initialized into a camlsync client directory.")
+            print_endline ("[.config] already exsits.\n" ^
+                           "It seems like the current directory has already been\
+                            initialized into a camlsync client directory.")
           else
             let config = {
               client_id = "client";
@@ -450,10 +452,10 @@ let delete_all_local_files () =
 
 
 let delete_history_folders () =
-  let rec delete_history_folder dir = 
+  let rec delete_history_folder dir =
     match Unix.readdir dir with
     | exception End_of_file -> ()
-    | p_name ->  
+    | p_name ->
       let rela_name = "./" ^ p_name in
       (if has_prefix_in_lst rela_name [history_dir_prefix] then
          remove_dir_and_files rela_name
@@ -472,70 +474,6 @@ let delete_history_folders () =
 let main () =
   if Array.length Sys.argv = 1 then
     sync ()
-<<<<<<< HEAD
-   else match Array.get Sys.argv 1 with
-     | "init" ->
-       begin try (
-         if (Array.length Sys.argv) = 4 then
-           Lwt_main.run (init (Array.get Sys.argv 2) (Array.get Sys.argv 3))
-         else Lwt_main.run (init "127.0.0.1:8080" "default") )
-         with Unix.Unix_error _ -> raise (ServerError "No Connection")
-       end
-     | "clean" ->
-       remove_dir_and_files ".caml_sync";
-       begin try Sys.remove ".config" with
-         | Sys_error e -> raise Not_Initialized
-       end
-     | "checkout" ->
-       let curr_handle =
-         try Unix.opendir "." with | _ -> raise Not_found
-       in
-       search_dir curr_handle (List.cons) [] [] "." valid_extensions
-       |> List.filter (fun file -> not (has_prefix_in_lst file unwanted_strs) )
-       |> List.iter delete_file;
-       let hidden_handle =
-         try Unix.opendir hidden_dir with | _ -> raise Not_Initialized
-       in
-       let from_files = search_dir hidden_handle (List.cons) [] [] hidden_dir valid_extensions in
-       let to_files = List.map (fun file -> replace_prefix file hidden_dir ".") from_files in
-       copy_files from_files to_files
-     | "status" ->
-       let cur_version = (load_config ()).version in
-       let f_diffs = compare_working_backup () in
-       print_endline ("Current version: " ^ (string_of_int cur_version));
-       if List.length f_diffs = 0 then print_endline "working directory clean "
-       else List.iter (fun {file_name; is_deleted}
-                   -> let f_status = if is_deleted then "deleted" else "modified" in
-                     print_endline (f_status ^ " : " ^  file_name)) f_diffs
-     | "history" ->
-       let fmt timestamp =
-         let open Unix in
-         let tm = timestamp |> localtime in
-         (string_of_int (tm.tm_year+1900))^" "^
-         (List.nth month tm.tm_mon)^" "^(string_of_int tm.tm_mday)^" "^
-         (List.nth week tm.tm_wday)^" "^
-         (string_of_int tm.tm_hour)^":"^(string_of_int tm.tm_min) in
-       if (Array.get Sys.argv 2) = "list" then
-         let history_log = (history_list (load_config ())) in
-         List.iter
-           (fun (hist:history):unit -> print_endline
-               (
-                 "Version: "^(string_of_int hist.version)
-                 ^"; Time: "^(fmt hist.timestamp)
-               )
-           )
-           history_log.log
-       else
-         let v =
-           try int_of_string (Array.get Sys.argv 2)
-           with _ -> raise Invalid_argument
-         in
-         time_travel (load_config ()) v
-     | "help" ->
-       print_endline "usage: camlsync [<init [url token]> | <clean> | <checkout> \
-                      <status> | <history> { <list> | <num> }]"
-     | _ -> raise Invalid_argument
-=======
   else match Array.get Sys.argv 1 with
     | "init" ->
       begin try (
@@ -620,13 +558,12 @@ let main () =
         print_endline "All local conflict files have been removed." end
       else raise (Invalid_argument ("Invalid arguments.\n" ^ usage))
     | _ -> raise (Invalid_argument ("Invalid arguments.\n" ^ usage))
->>>>>>> 43c80a192bb7384977d8170c3d01ae62e58cbd68
 
 let () =
   try main () with
   | Unauthorized -> print_endline ("Your token is wrong.\n" ^ "Please run 'camlsync clean' and 'camlsync init <url> <token>' to reinitialize your server.")
   | Timeout -> print_endline "Your request is time out."
-  | Unix.Unix_error _  
+  | Unix.Unix_error _
   | ServerError _ -> print_endline ("Cannot connect to the server." ^ "\nPlease double check your server address and make sure your server is running.")
   | Bad_request s -> print_endline s
   | Not_Initialized -> print_endline "Current directory has not been initialized."

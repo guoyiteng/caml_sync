@@ -17,7 +17,8 @@ assert ()
   then
     echo "Assertion failed:  \"$1\""
     echo "File \"$0\", line $lineno"
-    exit $E_ASSERT_FAILED
+    pkill camlsyncserver
+    exit 0
   fi  
 }
 mkdir test_boi
@@ -49,8 +50,29 @@ cd ../client_boi
 camlsync
 assert "! -e 1.txt" $LINENO
 
+# at client boi 1
+# sync multiple files
+echo "1" >> 1.txt
+echo "2" >> 2.txt
+echo "3" >> 3.txt
+camlsync
+cd ../client_boi2
+camlsync
+assert "-e 1.txt" $LINENO
+assert "-e 2.txt" $LINENO
+assert "-e 3.txt" $LINENO
+
+# test checkout 
+rm 1.txt
+rm 2.txt
+assert "! -e 1.txt" $LINENO
+assert "! -e 2.txt" $LINENO
+camlsync checkout
+assert "-e 1.txt" $LINENO
+assert "-e 2.txt" $LINENO
+
 
 cd ~/Documents/CS/Cornell/CS\ 3110/final
-echo Test Passed
+echo All Tests Passed Boi
 pkill camlsyncserver
 rm -rf test_boi

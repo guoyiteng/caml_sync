@@ -537,6 +537,20 @@ let main () =
         else time_travel (load_config ()) v
     | "help" ->
       print_endline usage
+    | "conflict" ->
+      if Array.length Sys.argv = 2 then
+        let conflicts = check_invalid_filename () in
+        if conflicts = [] then
+          print_endline "There is nothing conflict."
+        else
+          begin
+            print_endline "Following file(s) have sync conflicts with the server:";
+            List.iter (fun ele -> print_endline ("# " ^ ele) ) conflicts
+          end
+      else if Array.length Sys.argv = 3 && Sys.argv.(2) = "clean"
+      then begin delete_all_local_files ();
+        print_endline "All local conflict files have been removed." end
+      else raise (Invalid_argument ("Invalid arguments.\n" ^ usage))
     | _ -> raise (Invalid_argument ("Invalid arguments.\n" ^ usage))
 
 let () =

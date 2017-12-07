@@ -122,7 +122,7 @@ let has_prefix_in_lst str_to_check lst_prefices =
        try
          let sub_str = String.sub str_to_check 0 (String.length elem) in
          if sub_str = elem then true else acc
-       with | Invalid_argument _ -> acc
+       with | Invalid_argument -> acc
     ) false lst_prefices
 
 (* [contains_local filename] checks whether [filename] contains "_local"
@@ -427,11 +427,11 @@ let main () =
                    -> let f_status = if is_deleted then "deleted" else "modified" in
                      print_endline (f_status ^ " : " ^  file_name)) f_diffs
      | "history" ->
-       if Array.get Sys.argv 2 = list then
+       if Array.get Sys.argv 2 = "list" then
          failwith "unimplemented"
        else
          let v =
-           try string_of_int (Array.get Sys.argv 2)
+           try int_of_string (Array.get Sys.argv 2)
            with _ -> raise Invalid_argument
          in
          failwith "unimplemented"
@@ -447,5 +447,4 @@ let () =
   | ServerError e -> print_endline ("Server Error:\n"^e)
   | Not_Initialized -> print_endline "Current directory has not been initialized"
   | Unix.Unix_error _ -> print_endline ("Server Error:\nNo Connection")
-  | Exception e -> print_endline e
   | Invalid_argument -> print_endline "Invalid argument"

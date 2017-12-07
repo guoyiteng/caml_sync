@@ -10,6 +10,7 @@ exception Timeout
 exception Unauthorized
 exception ServerError of string
 exception Not_Initialized
+exception Invalid_argument
 
 let hidden_dir = ".caml_sync"
 
@@ -431,15 +432,13 @@ let main () =
        else
          let v =
            try string_of_int (Array.get Sys.argv 2)
-           with _ -> raise (Exception "Invalid command: must be number")
+           with _ -> raise Invalid_argument
          in
          failwith "unimplemented"
-     | _ ->
-       print_endline "usage:\n\
-                      caml_sync init <url> <token> ->\n\
-                      \tinits the current directory as a client directory\
-                      caml_sync ->\n\
-                      \tsyncs files in local directories with files in server"
+     | "help" ->
+       print_endline "usage: camlsync [<init [url token]> | <clean> | <checkout> \
+                      <status> | <history>]"
+     | _ -> raise Invalid_argument
 
 let () =
   try main () with
@@ -449,3 +448,4 @@ let () =
   | Not_Initialized -> print_endline "Current directory has not been initialized"
   | Unix.Unix_error _ -> print_endline ("Server Error:\nNo Connection")
   | Exception e -> print_endline e
+  | Invalid_argument -> print_endline "Invalid argument"

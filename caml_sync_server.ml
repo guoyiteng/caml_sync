@@ -182,8 +182,8 @@ let handle_get_history_list = get "/history" begin fun
     Rwlock.read_lock lock;
     let config = load_config () in
     if verify_token req config then
-    let logs = (load_history ()).log in
-    Rwlock.read_unlock lock;
+      let logs = (load_history ()).log in
+      Rwlock.read_unlock lock;
       `Json ({log = List.tl logs} |> build_history_log_json) |> respond'
     else
       `String ("Unauthorized Access") |> respond' ~code:`Unauthorized
@@ -296,8 +296,9 @@ let main () =
     then
       let dir = "." in
       let d_handle =
-        try Unix.opendir dir  with | _ -> raise Not_found;
-      in search_dir d_handle (List.cons) [] [] dir [".json"; ".diff"] |> List.iter delete_file
+        try Unix.opendir dir  with | _ -> raise Not_found
+      in search_dir d_handle (List.cons) [] [] dir [".json"; ".diff"] |> List.iter delete_file;
+      Unix.closedir d_handle
     else
       raise (Invalid_argument "Invalid arguments")
   with

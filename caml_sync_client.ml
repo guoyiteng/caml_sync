@@ -464,7 +464,7 @@ let delete_all_local_files () =
 let delete_history_folders () =
   let rec delete_history_folder dir =
     match Unix.readdir dir with
-    | exception End_of_file -> ()
+    | exception End_of_file -> Unix.closedir dir
     | p_name ->
       let rela_name = "./" ^ p_name in
       (if has_prefix_in_lst rela_name [history_dir_prefix] then
@@ -472,8 +472,7 @@ let delete_history_folders () =
        else ());
       delete_history_folder dir in
   let dir = Unix.opendir "." in
-  delete_history_folder dir;
-  Unix.closedir dir
+  delete_history_folder dir
 
 (* usage:
  *  caml_sync init <url> <token> ->

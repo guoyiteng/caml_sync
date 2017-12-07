@@ -143,36 +143,36 @@ module Make_Diff ( Diff_Impl : Diff_Core) : Diff = struct
         end
     in List.rev (match_op 1 diff_content [])
 
-    let build_diff_json diff_obj =
-      let open Ezjsonm in
-      let to_json_strlist str_lst =
-        list (fun str -> string str) str_lst in
-      (* list of dicts *)
-      let open Diff_Impl in
-      list (fun op ->
-          match op with
-          | Delete index ->
-            dict [("op", string "del");
-                  ("line", int index);
-                  ("content", to_json_strlist [""])]
-          | Insert (index, str_lst) ->
-            dict [("op", string "ins");
-                  ("line", int index);
-                  ("content", to_json_strlist str_lst)]
-        ) diff_obj
+  let build_diff_json diff_obj =
+    let open Ezjsonm in
+    let to_json_strlist str_lst =
+      list (fun str -> string str) str_lst in
+    (* list of dicts *)
+    let open Diff_Impl in
+    list (fun op ->
+        match op with
+        | Delete index ->
+          dict [("op", string "del");
+                ("line", int index);
+                ("content", to_json_strlist [""])]
+        | Insert (index, str_lst) ->
+          dict [("op", string "ins");
+                ("line", int index);
+                ("content", to_json_strlist str_lst)]
+      ) diff_obj
 
-    let parse_diff_json diff_json =
-      let open Ezjsonm in
-      get_list
-        (fun elem ->
-           let op = extract_string elem "op" in
-           let line_index = extract_int elem "line" in
-           let content = extract_strlist elem "content" in
-           let open Diff_Impl in
-           if op = "del" then Delete line_index
-           else if op = "ins" then Insert (line_index, content)
-           else failwith "Error when parsing json"
-        ) diff_json
+  let parse_diff_json diff_json =
+    let open Ezjsonm in
+    get_list
+      (fun elem ->
+         let op = extract_string elem "op" in
+         let line_index = extract_int elem "line" in
+         let content = extract_strlist elem "content" in
+         let open Diff_Impl in
+         if op = "del" then Delete line_index
+         else if op = "ins" then Insert (line_index, content)
+         else failwith "Error when parsing json"
+      ) diff_json
 end
 
 module Diff_Impl = Make_Diff (DP_Diff)
@@ -266,7 +266,10 @@ let read_file filename =
       match (read_line in_c) with
       | None -> List.rev acc
       | Some s -> lines_from_files in_c (s :: acc) in
-    lines_from_files (open_in filename) []
+    let c = open_in filename in
+    let return_content = lines_from_files c [] in
+    close_in c;
+    return_content
 
 let write_file filename content =
   if Sys.file_exists filename
@@ -296,7 +299,7 @@ let delete_file filename =
   try Sys.remove filename; recursively_rm_dir rev_lst_split
   with Sys_error _ -> raise (File_not_found "Cannot remove file.")
 
- let rec search_dir dir_handle add acc_file acc_dir dir_name valid_exts =
+let rec search_dir dir_handle add acc_file acc_dir dir_name valid_exts =
   (* similar to BFS *)
   match Unix.readdir dir_handle with
   | exception End_of_file ->

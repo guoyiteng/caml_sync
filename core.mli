@@ -99,7 +99,8 @@ val delete_file : string -> unit
  * represented by [dir_handle] or its subdirectories,
  * and returns a set of all such files of approved suffixes in [valid_exts].
  * [f_add] is a function to add new file to the existing data structure [acc_file].
- * requires: [dir_handle] is a valid directory handle returned by Unix.opendir. *)
+ * requires: [dir_handle] is a valid directory handle returned by Unix.opendir.
+ * effects: [search_dir] will close [dir_handle] after it finishes its work. *)
 val search_dir : Unix.dir_handle -> (string -> 'a -> 'a) -> 'a -> string list -> string -> string list -> 'a
 
 type history = {

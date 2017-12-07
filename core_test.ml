@@ -12,6 +12,14 @@ let file_content_2 = read_file "resources/sample.json"
 let diff_file_1 = Diff_Impl.calc_diff file_content_1 file_content_2
 let diff_file_2 = Diff_Impl.calc_diff file_content_2 file_content_1
 
+let ulysses = read_file "resources/Ulysses.txt"
+let ulysses_broken = read_file "resources/Ulysses_broken.txt"
+let ulysses_fix = Diff_Impl.calc_diff ulysses_broken ulysses
+
+let dracula = read_file "resources/Dracula.txt"
+let dracula_broken = read_file "resources/Dracula_broken.txt"
+let dracula_fix = Diff_Impl.calc_diff dracula_broken dracula
+
 let hello_world_diff = {
   prev_version = 0;
   cur_version = 0;
@@ -29,8 +37,12 @@ let update_diff_tests = [
   "test_2" >:: (fun _ -> assert_equal new_2 (Diff_Impl.apply_diff old_2 diff_2));
   "test_file_1" >:: (fun _ -> assert_equal file_content_2
                         (Diff_Impl.apply_diff file_content_1 diff_file_1));
-  "test_file_1" >:: (fun _ -> assert_equal file_content_1
+  "test_file_2" >:: (fun _ -> assert_equal file_content_1
                         (Diff_Impl.apply_diff file_content_2 diff_file_2));
+  "test_ulysses" >:: (fun _ -> assert_equal ulysses
+                         (Diff_Impl.apply_diff ulysses_broken ulysses_fix));
+  "test_dracula" >:: (fun _ -> assert_equal dracula
+                         (Diff_Impl.apply_diff dracula_broken dracula_fix));
   "test_parse_json" >:: (fun _ ->
       assert_equal hello_world_diff
         (open_in "resources/helloworld.json" |> Ezjsonm.from_channel

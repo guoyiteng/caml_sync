@@ -51,7 +51,7 @@ dependencies:
 test:
 	rm -rf .config .caml_sync config.json history.json *.diff
 	ocamlbuild -use-ocamlfind client_test.byte
-	./client_test.sh
+	./caml_sync.sh
 	rm -rf test_boi
 	ocamlbuild -use-ocamlfind core_test.byte
 	./core_test.byte

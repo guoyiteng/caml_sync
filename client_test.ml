@@ -26,7 +26,6 @@ let request_tests = [
   "test_post_local_diff" >:: (fun _ -> ());
   "test_history_list" >:: (fun _ -> ());
   "test_time_travel" >:: (fun _ -> ());
-
 ]
 
 let tests =

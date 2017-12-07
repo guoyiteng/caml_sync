@@ -1,8 +1,8 @@
 .PHONY: server client
 all: server client
 install:
-	ln -sf `pwd | sed 's/ /\\ /g'`/_build/caml_sync_client.native /usr/local/bin/camlsync
-	ln -sf `pwd | sed 's/ /\\ /g'`/_build/caml_sync_server.native /usr/local/bin/camlsyncserver
+	ln -sf "`pwd | sed 's/ /\\ /g'`"/_build/caml_sync_client.native /usr/local/bin/camlsync
+	ln -sf "`pwd | sed 's/ /\\ /g'`"/_build/caml_sync_server.native /usr/local/bin/camlsyncserver
 uninstall:
 	unlink /usr/local/bin/camlsync
 	unlink /usr/local/bin/camlsyncserver

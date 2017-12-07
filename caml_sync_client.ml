@@ -439,3 +439,4 @@ let () =
   | Timeout -> print_endline "Request Timeout"
   | ServerError e -> print_endline ("Server Error:\n"^e)
   | Not_Initialized -> print_endline "Current directory has not been initialized"
+  | Unix.Unix_error _ -> print_endline ("Server Error:\nNo Connection")

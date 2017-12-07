@@ -27,7 +27,7 @@ let unwanted_strs =
    history_dir_prefix]
 
 let usage = "usage: camlsync [<init [url token]> | <clean> | <checkout> \
-<status> | <history (num) | list>]"
+             <status> | <history (num) | list>]"
 
 type config = {
   client_id: string;
@@ -212,9 +212,13 @@ let copy_file from_name to_name =
   write_file to_name (read_file from_name)
 
 (* [copy_files from_names to_names] copy all files in [from_names] to
- * [to_names]. *)
+ * [to_names]. If some files in [from_names] do not exist, this function will 
+ * ignore them. *)
 let copy_files from_names to_names =
-  List.iter2 (fun f t -> copy_file f t) from_names to_names
+  List.iter2 (fun f t -> 
+      if Sys.file_exists f then 
+        copy_file f t
+    ) from_names to_names
 
 let backup_working_files () =
   let filenames_cur =

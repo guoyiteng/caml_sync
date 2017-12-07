@@ -424,11 +424,11 @@ let init url token =
       begin match List.assoc_opt "version" json with
         | Some v ->
           if Sys.file_exists ".config" then
-            print_endline "[.config] already exsits; it seems like the current directory \
-                           has already been initialized into a caml_sync client directory"
+            print_endline "[.config] already exsits.\n It seems like the current directory \
+                           has already been initialized into a camlsync client directory."
           else
             let config = {
-              client_id = "TODO";
+              client_id = "client";
               url = url;
               token = token;
               version = 0
@@ -436,11 +436,33 @@ let init url token =
             update_config config;
             remove_dir_and_files hidden_dir;
             Unix.mkdir hidden_dir 0o770;
+            print_endline ("Successfully initialize the camlsync client.");
             sync ()
         | None ->
           raise (ServerError "The address you entered does not seem to be a valid caml_sync address")
       end
     | _ -> raise (ServerError "The address you entered does not seem to be a valid caml_sync address")
+
+let delete_all_local_files () =
+  let dir = "." in
+  let d_handle = Unix.opendir dir in
+  let set = search_dir d_handle StrSet.add StrSet.empty [] dir (List.map (fun ele -> "_local" ^ ele) valid_extensions) in
+  StrSet.iter (fun ele -> delete_file ele) set
+
+
+let delete_history_folders () =
+  let rec delete_history_folder dir = 
+    match Unix.readdir dir with
+    | exception End_of_file -> ()
+    | p_name ->  
+      let rela_name = "./" ^ p_name in
+      (if has_prefix_in_lst rela_name [history_dir_prefix] then
+         remove_dir_and_files rela_name
+       else ());
+      delete_history_folder dir in
+  let dir = Unix.opendir "." in
+  delete_history_folder dir;
+  Unix.closedir dir
 
 (* usage:
  *  caml_sync init <url> <token> ->
@@ -457,13 +479,16 @@ let main () =
         if (Array.length Sys.argv) = 4 then
           Lwt_main.run (init (Array.get Sys.argv 2) (Array.get Sys.argv 3))
         else Lwt_main.run (init "127.0.0.1:8080" "default") )
-        with Unix.Unix_error _ -> raise (ServerError "No Connection")
+        with Unix.Unix_error _ -> raise (ServerError "Cannot connect to the server.")
       end
     | "clean" ->
-      remove_dir_and_files ".caml_sync";
-      begin try Sys.remove ".config" with
-        | Sys_error e -> raise Not_Initialized
-      end
+      begin try Sys.remove ".config";
+          remove_dir_and_files ".caml_sync";
+          delete_all_local_files ();
+          delete_history_folders () with
+      | Sys_error e -> raise Not_Initialized
+      end;
+      print_endline "All local conflict files, history version folders, camlsync hidden files and folders have been removed."
     | "checkout" ->
       let curr_handle =
         try Unix.opendir "." with | _ -> raise Not_found
@@ -516,10 +541,10 @@ let main () =
 
 let () =
   try main () with
-  | Unauthorized -> print_endline "Authorization Denied"
-  | Timeout -> print_endline "Request Timeout"
-  | ServerError e -> print_endline ("Server Error:\n" ^ e)
+  | Unauthorized -> print_endline ("Your token is wrong.\n" ^ "Please run 'camlsync clean' and 'camlsync init <url> <token>' to reinitialize your server.")
+  | Timeout -> print_endline "Your request is time out."
+  | Unix.Unix_error _  
+  | ServerError _ -> print_endline ("Cannot connect to the server." ^ "\nPlease double check your server address and make sure your server is running.")
   | Bad_request s -> print_endline s
   | Not_Initialized -> print_endline "Current directory has not been initialized."
-  | Unix.Unix_error _ -> print_endline ("Server Error:\nNo Connection")
   | Invalid_argument s -> print_endline s

@@ -313,7 +313,8 @@ let delete_file filename =
       (* save information about this subdirectory in acc_dir, to be processed
        * after having seen all files in the current directory *)
       search_dir dir_handle add acc_file (path::acc_dir) dir_name valid_exts
-    else if List.mem (Filename.extension p_name) valid_exts then
+      (* support suffix here in addition to extension. *)
+    else if List.exists (fun suff -> Filename.check_suffix p_name suff) valid_exts then
       let new_fileset = add path acc_file in
       search_dir dir_handle add new_fileset acc_dir dir_name valid_exts
     else search_dir dir_handle add acc_file acc_dir dir_name valid_exts

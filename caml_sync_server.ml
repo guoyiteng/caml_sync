@@ -175,7 +175,8 @@ let handle_get_history_list = get "/history" begin fun
     req ->
     let config = load_config () in
     if verify_token req config then
-      `Json (load_history () |> build_history_log_json) |> respond'
+    let logs = (load_history ()).log in
+      `Json ({log = List.tl logs} |> build_history_log_json) |> respond'
     else
       `String ("Unauthorized Access") |> respond' ~code:`Unauthorized
   end

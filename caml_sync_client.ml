@@ -515,12 +515,12 @@ let main () =
       let fmt timestamp =
         let open Unix in
         let tm = timestamp |> localtime in
-        (string_of_int (tm.tm_year+1900))^" "^
-        (List.nth month tm.tm_mon)^" "^(string_of_int tm.tm_mday)^" "^
-        (List.nth week tm.tm_wday)^" "^
-        (string_of_int tm.tm_hour)^":"^(string_of_int tm.tm_min) in
-      if (Array.get Sys.argv 2) = "list" then
-      (* TODO: version 0 should be removed *)
+        (List.nth week tm.tm_wday) ^ " " ^
+        (List.nth month tm.tm_mon) ^ " " ^
+        (string_of_int tm.tm_mday) ^ " " ^ 
+        (string_of_int (tm.tm_year+1900)) ^ " " ^
+        (string_of_int tm.tm_hour) ^ ":" ^ (string_of_int tm.tm_min) in
+      if Array.length Sys.argv = 3 && (Array.get Sys.argv 2) = "list" then
         let history_log = (history_list (load_config ())) in
         List.iter
           (fun (hist:history):unit -> print_endline
@@ -529,18 +529,21 @@ let main () =
                 ^"; Time: "^(fmt hist.timestamp)
               )
           )
-          history_log.log
-      else if Sys.argv.(2) = "clean" then
+          history_log.log;
+        print_endline "Type 'camlsync history i' to download version i backup."
+      else if Array.length Sys.argv = 3 && Sys.argv.(2) = "clean" then
         (delete_history_folders ();
          print_endline "All history version folders have been removed.")
-      else
+      else if Array.length Sys.argv = 3 then
         let v =
           try int_of_string (Array.get Sys.argv 2)
           with _ -> raise (Invalid_argument "The version number must be an integer which is larger than or equal to 1.")
         in
         if v < 1 then raise (Invalid_argument "The version number must be an integer which is larger than or equal to 1.")
-        else time_travel (load_config ()) v
-        (* TODO: add printout *)
+        else begin time_travel (load_config ()) v;
+        let v_s = Array.get Sys.argv 2 in
+        print_endline ("Download your version " ^ v_s ^ " backup to ./camlsync_history_version_" ^ v_s ^ ".") end
+      else raise (Invalid_argument ("Invalid arguments.\n" ^ usage))
     | "help" ->
       print_endline usage
     | "conflict" ->

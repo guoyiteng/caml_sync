@@ -319,11 +319,11 @@ type history = {
   timestamp: float
 }
 
-type hisotry_log = {
+type history_log = {
   log: history list
 }
 
-let build_history_json h_diff = failwith "todo"
+let build_history_json h = failwith "todo"
 let parse_history_json h_json = failwith "todo"
-let build_history_log_json hl_diff = failwith "todo"
+let build_history_log_json hl = failwith "todo"
 let parse_history_log_json hl_json = failwith "todo"

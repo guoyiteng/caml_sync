@@ -111,7 +111,18 @@ type history_log = {
   log: history list
 }
 
+(* [build_history_json h] returns a json representing
+ * the ocaml history object [h] *)
 val build_history_json : history -> Ezjsonm.t
+
+(* [parse_history_json h_json] returns an ocaml history object
+ * represented by [h_json] *)
 val parse_history_json : Ezjsonm.t -> history
+
+(* [build_history_log_json hl] returns a json representing
+ * the ocaml history object [hl] *)
 val build_history_log_json : history_log -> Ezjsonm.t
+
+(* [parse_history_log_json hl_json] returns an ocaml history object
+ * represented by [hl_json] *)
 val parse_history_log_json : Ezjsonm.t -> history_log

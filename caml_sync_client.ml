@@ -23,16 +23,21 @@ let hidden_dir = ".caml_sync"
 (* [history_dir_prefix] is the prefix of history backup folder name. *)
 let history_dir_prefix = "./camlsync_history_version_"
 
-(* [valid_extensions] is a list of extensions that camlsync accepts. All files without these extensions will be ignored. *)
-let valid_extensions = [".ml"; ".mli"; ".txt"; ".sh"; ".java"; ".c"; ".h"; ".md"; ".cpp"; ".py"; ".jl"; ".m"; ".csv"; ".json"]
+(* [valid_extensions] is a list of extensions that camlsync accepts. 
+ * All files without these extensions will be ignored. *)
+let valid_extensions = [".ml"; ".mli"; ".txt"; ".sh"; ".java"; ".c"; ".h";
+                        ".md"; ".cpp"; ".py"; ".jl"; ".m"; ".csv"; ".json"]
 
+(* [unwanted_strs] is a list of files and folders that should be ignored
+ *  by camlsync. *)
 let unwanted_strs =
   ["." ^ Filename.dir_sep ^ hidden_dir ^ Filename.dir_sep;
    "." ^ Filename.dir_sep ^ ".config";
    history_dir_prefix]
 
-let usage = "usage: camlsync [<init [url token]> | <clean> | <checkout> \
-             <status> | <history (num) | list | clean> | <conflict [clean]>]"
+(* [usage] is the usage message. *)
+let usage = "usage: camlsync [<init [url token]> | <clean> | <checkout> |\n\
+             \t\t<status> | <history num | list | clean> | <conflict [clean]>]"
 
 type config = {
   client_id: string;
@@ -41,6 +46,7 @@ type config = {
   version: int;
 }
 
+(* [timeout ()] timeout after 5 seconds. *)
 let timeout =
   fun () -> bind (Lwt_unix.sleep 5.) (fun _ -> raise Timeout)
 
@@ -307,7 +313,6 @@ let generate_client_version_diff server_diff =
     ) local_files_diff in
   (both_modified_lst, return_files_diff)
 
-
 let get_update_diff config =
   let open Uri in
   let uri = Uri.of_string  ("//"^config.url) in
@@ -473,6 +478,8 @@ let init url token =
                                  ^ " not seem to be a valid caml_sync address"))
   in Lwt_main.run (Lwt.pick [request; timeout ()])
 
+(* [delete_all_local_files ()] delete all merge conflict files. 
+ * These files end up with "_local". *)
 let delete_all_local_files () =
   let dir = "." in
   let d_handle = Unix.opendir dir in
@@ -480,7 +487,8 @@ let delete_all_local_files () =
       dir (List.map (fun ele -> "_local" ^ ele) valid_extensions) in
   StrSet.iter (fun ele -> delete_file ele) set
 
-
+(* [delete_history_folders ()] delete all backup history folders. 
+ * These folders start with "camlsync_history_" *)
 let delete_history_folders () =
   let rec delete_history_folder dir =
     match Unix.readdir dir with

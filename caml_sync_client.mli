@@ -20,15 +20,8 @@ val load_config : unit -> config
 (* [update_config config] updates the [.config] file with [config] *)
 val update_config : config -> unit
 
-(* [get_update_diff config]
- * retrieves the current version of the working directory from [config],
- * sends a post request to the server to retrieve the difference between
- * the local version and the server's latest version, and returns the difference
-*)
-val get_update_diff : config -> (string * bool) list * file_diff list
-
-(* [post_local_diff config version_diff] sends the difference between the local version
- * and the server version to the server via json
+(* [post_local_diff config version_diff] sends the difference between the local 
+ * version and the server version to the server via json
 *)
 val post_local_diff : config -> version_diff -> int
 
@@ -62,28 +55,38 @@ val check_both_modified_files :
  * or rename the file. If [is_deleted] is true, we should delete the file. *)
 val rename_both_modified : (string * bool) list -> unit
 
-(* [generate_client_version_diff server_diff] returns [(both_modified_lst, local_diff_files)].
- * returns: [None] if the current client has not made any update since the last sync,
- * otherwise returns [Some client_diff] where [client_diff] is the new update
- * that the current client has made
-*)
-val generate_client_version_diff : version_diff -> (string * bool) list * file_diff list
-
 (* [backup_working_files ()] copies all the files in current working
  * directory to ".caml_sync/", except those files in that contain "_local" at the
  * end of their filename
- *)
+*)
 val backup_working_files : unit -> unit
+
+(* [generate_client_version_diff server_diff] returns 
+ * [(both_modified_lst, local_diff_files)].
+ *
+ * returns: [None] if the current client has not made any update since the last 
+ * sync, otherwise returns [Some client_diff] where [client_diff] is the new 
+ * update that the current client has made
+*)
+val generate_client_version_diff : 
+  version_diff -> (string * bool) list * file_diff list
+
+(* [get_update_diff config]
+ * retrieves the current version of the working directory from [config],
+ * sends a post request to the server to retrieve the difference between
+ * the local version and the server's latest version, and returns the difference
+*)
+val get_update_diff : config -> (string * bool) list * file_diff list
 
 (* [history_list config] queries the server configured at [config] for a list
  * for version and time of all historical versions of the directory
- *)
+*)
 val history_list : config -> history_log
 
 (* [time_travel config n] queries the server configured at [config] for the
  * difference between the current directory from version [n] and applies
  * the diff the restore the file structure at version [n]
- *)
+*)
 val time_travel : config -> int -> unit
 
 (* [init url token] creates a hidden ".config" file and stores [url] and [token]
@@ -95,5 +98,5 @@ val init : string -> string -> unit
 val sync : unit -> unit
 
 (* Top level of client
- *)
+*)
 val main : unit -> unit

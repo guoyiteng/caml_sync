@@ -503,7 +503,7 @@ let main () =
          time_travel (load_config ()) v
      | "help" ->
        print_endline "usage: camlsync [<init [url token]> | <clean> | <checkout> \
-                      <status> | <history>]"
+                      <status> | <history> { <list> | <num> }]"
      | _ -> raise Invalid_argument
 
 let () =

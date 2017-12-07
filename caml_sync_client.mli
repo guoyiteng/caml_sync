@@ -65,10 +65,19 @@ val generate_client_version_diff : version_diff -> (string * bool) list * file_d
 (* [backup_working_files ()] copies all the files in current working
  * directory to ".caml_sync/", except those files in that contain "_local" at the
  * end of their filename
-*)
+ *)
 val backup_working_files : unit -> unit
 
+(* [history_list config] queries the server configured at [config] for a list
+ * for version and time of all historical versions of the directory
+ *)
 val history_list : config -> history_log
+
+(* [time_travel config n] queries the server configured at [config] for the
+ * difference between the current directory from version [n] and applies
+ * the diff the restore the file structure at version [n]
+ *)
+val time_travel : config -> int -> unit
 
 (* [init url token] creates a hidden ".config" file and stores [url] and [token]
  * in ".config". It also creates a folder ".caml_sync/" in the current directory.

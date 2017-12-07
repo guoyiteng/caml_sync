@@ -8,9 +8,9 @@ module StrSet = Set.Make (String)
 
 exception Timeout
 exception Unauthorized
+exception Bad_request of string
 exception ServerError of string
 exception Not_Initialized
-exception Invalid_argument
 
 let week = ["Sun";"Mon";"Tue";"Wed";"Thu";"Fri";"Sat"]
 let month = ["Jan";"Feb";"Mar";"Apr";"May";"Jun";"Jul";"Aug";"Sep";"Oct";"Nov";"Dec"]
@@ -25,6 +25,9 @@ let unwanted_strs =
   ["." ^ Filename.dir_sep ^ hidden_dir ^ Filename.dir_sep;
    "." ^ Filename.dir_sep ^ ".config";
    history_dir_prefix]
+
+let usage = "usage: camlsync [<init [url token]> | <clean> | <checkout> \
+<status> | <history (num) | list>]"
 
 type config = {
   client_id: string;
@@ -85,6 +88,7 @@ let post_local_diff config version_diff =
     >>= fun (resp, body) ->
     let code = resp |> Response.status |> Code.code_of_status in
     if code = 401 then raise Unauthorized
+    else if code = 400 then raise (Bad_request "Bad_request when posting local diff to the server.")
     else try (
       body |> Cohttp_lwt.Body.to_string >|= fun body ->
       match body |> from_string with
@@ -128,7 +132,7 @@ let has_prefix_in_lst str_to_check lst_prefices =
        try
          let sub_str = String.sub str_to_check 0 (String.length elem) in
          if sub_str = elem then true else acc
-       with | Invalid_argument -> acc
+       with | Invalid_argument _ -> acc
     ) false lst_prefices
 
 (* [contains_local filename] checks whether [filename] contains "_local"
@@ -299,6 +303,7 @@ let get_update_diff config =
     >>= fun (resp, body) ->
     let code = resp |> Response.status |> Code.code_of_status in
     if code = 401 then raise Unauthorized
+    else if code = 400 then raise (Bad_request "Bad_request when getting diff from the server.")
     else
       try (
         body |> Cohttp_lwt.Body.to_string >|= fun body ->
@@ -344,6 +349,7 @@ let time_travel config v =
     >>= fun (resp, body) ->
     let code = resp |> Response.status |> Code.code_of_status in
     if code = 401 then raise Unauthorized
+    else if code = 400 then raise (Bad_request "Bad_request when getting history version from the server.")
     else try (
       body |> Cohttp_lwt.Body.to_string >|= fun body ->
       let version_diff = body |> from_string |> parse_version_diff_json in
@@ -499,19 +505,20 @@ let main () =
       else
         let v =
           try int_of_string (Array.get Sys.argv 2)
-          with _ -> raise Invalid_argument
+          with _ -> raise (Invalid_argument "The version number must be an integer which is larger than or equal to 1.")
         in
-        time_travel (load_config ()) v
+        if v < 1 then raise (Invalid_argument "The version number must be an integer which is larger than or equal to 1.")
+        else time_travel (load_config ()) v
     | "help" ->
-      print_endline "usage: camlsync [<init [url token]> | <clean> | <checkout> \
-                     <status> | <history>]"
-    | _ -> raise Invalid_argument
+      print_endline usage
+    | _ -> raise (Invalid_argument ("Invalid arguments.\n" ^ usage))
 
 let () =
   try main () with
   | Unauthorized -> print_endline "Authorization Denied"
   | Timeout -> print_endline "Request Timeout"
-  | ServerError e -> print_endline ("Server Error:\n"^e)
+  | ServerError e -> print_endline ("Server Error:\n" ^ e)
+  | Bad_request s -> print_endline s
   | Not_Initialized -> print_endline "Current directory has not been initialized"
   | Unix.Unix_error _ -> print_endline ("Server Error:\nNo Connection")
-  | Invalid_argument -> print_endline "Invalid argument"
+  | Invalid_argument s -> print_endline s

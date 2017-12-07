@@ -225,6 +225,10 @@ let remove_dir_and_files folder_name =
   with
   | Not_found -> ()
 
+(* [apply_v_diff_to_dir v_diff dir_prefix] applies the version_diff [v_diff] to
+ * the directory indicated by dir_prefix
+ * requires: the string for [dir_prefix] does not end with '/'
+ *)
 let apply_v_diff_to_dir v_diff dir_prefix =
   List.iter (fun {file_name; is_deleted; content_diff} ->
       let f_name = replace_prefix file_name "." dir_prefix in

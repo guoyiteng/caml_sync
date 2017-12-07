@@ -42,7 +42,8 @@ let load_config () =
     | Not_found -> raise (File_not_found ".config")
   with
   | Sys_error e ->
-    raise (File_not_found ".config")
+    print_endline ".config not found. Please initialize client first.";
+    exit 0
 
 let update_config config =
   try

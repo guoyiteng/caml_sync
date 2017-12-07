@@ -1,5 +1,6 @@
 open Core
 
+(* camlsync client config type represeting a client config file. *)
 type config = {
   client_id: string;
   url: string;

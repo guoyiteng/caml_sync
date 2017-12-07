@@ -12,15 +12,19 @@ exception Bad_request of string
 exception ServerError of string
 exception Not_Initialized
 
+(* week, month list used to format date. *)
 let week = ["Sun";"Mon";"Tue";"Wed";"Thu";"Fri";"Sat"]
 let month = ["Jan";"Feb";"Mar";"Apr";"May";"Jun";
              "Jul";"Aug";"Sep";"Oct";"Nov";"Dec"]
 
+(* [hidden_dir] is the directory storing the backup file. *)
 let hidden_dir = ".caml_sync"
 
+(* [history_dir_prefix] is the prefix of history backup folder name. *)
 let history_dir_prefix = "./camlsync_history_version_"
 
-let valid_extensions = [".ml"; ".mli"; ".txt"]
+(* [valid_extensions] is a list of extensions that camlsync accepts. All files without these extensions will be ignored. *)
+let valid_extensions = [".ml"; ".mli"; ".txt"; ".sh"; ".java"; ".c"; ".h"; ".md"; ".cpp"; ".py"; ".jl"; ".m"; ".csv"; ".json"]
 
 let unwanted_strs =
   ["." ^ Filename.dir_sep ^ hidden_dir ^ Filename.dir_sep;

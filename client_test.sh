@@ -86,6 +86,6 @@ assert [ "$(camlsync status)"=="modified: 1.txt" ] $LINENO
 
 
 
-echo All Tests Passed Boi
+echo All Tests Passed!!!!!!!
 pkill camlsyncserver
 rm -rf test_boi

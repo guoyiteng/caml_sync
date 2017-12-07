@@ -297,8 +297,7 @@ let main () =
       let dir = "." in
       let d_handle =
         try Unix.opendir dir  with | _ -> raise Not_found
-      in search_dir d_handle (List.cons) [] [] dir [".json"; ".diff"] |> List.iter delete_file;
-      Unix.closedir d_handle
+      in search_dir d_handle (List.cons) [] [] dir [".json"; ".diff"] |> List.iter delete_file
     else
       raise (Invalid_argument "Invalid arguments")
   with

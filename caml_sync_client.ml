@@ -17,7 +17,7 @@ let month = ["Jan";"Feb";"Mar";"Apr";"May";"Jun";"Jul";"Aug";"Sep";"Oct";"Nov";"
 
 let hidden_dir = ".caml_sync"
 
-let history_dir_prefix = "./history_version_"
+let history_dir_prefix = "./camlsync_history_version_"
 
 let valid_extensions = [".ml"; ".mli"; ".txt"]
 
@@ -27,7 +27,7 @@ let unwanted_strs =
    history_dir_prefix]
 
 let usage = "usage: camlsync [<init [url token]> | <clean> | <checkout> \
-             <status> | <history (num) | list>]"
+             <status> | <history (num) | list | clean>]"
 
 type config = {
   client_id: string;
@@ -151,7 +151,7 @@ let check_invalid_filename () =
   StrSet.fold
     (fun elem acc ->
        if has_prefix_in_lst elem unwanted_strs then acc (* skip this file *)
-       else if contains_local elem then true else acc) filenames_cur false
+       else if contains_local elem then StrSet.add elem acc else acc) filenames_cur StrSet.empty |> StrSet.elements
 
 let compare_working_backup () =
   let filenames_last_sync =
@@ -362,11 +362,9 @@ let time_travel config v =
   in Lwt_main.run (Lwt.pick [request; timeout ()])
 
 let sync () =
-  print_endline "Loading [.config]...";
   let config = load_config () in
-  print_endline "Successfully loaded [.config].";
-  if check_invalid_filename () then
-    print_endline "Please resolve local merge conflict before syncing with the server.\n"
+  if check_invalid_filename () <> [] then
+    print_endline "Please resolve local merge conflict before syncing with the server."
   else
     let print_modified m_list =
       if m_list = [] then ()
@@ -375,15 +373,15 @@ let sync () =
       List.iter (
         fun (file, deleted)->
           if deleted then
-            print_endline (file^" - deleted")
+            print_endline ("# " ^ file ^ " - deleted")
           else
-            print_endline file
+            print_endline ("# " ^ file)
       ) m_list;
-      print_endline "These files have been renamed to [_local].";
+      print_endline "These files have been renamed to [*_local].";
       if List.exists (fun (_,deleted) -> deleted) m_list then
         print_endline "Files with [- deleted] appended have updates \
                        from the server, yet are deleted locally and are not \
-                       renamed with the [_local] prefix. Please delete them again \
+                       renamed with the [*_local] suffix. Please delete them again \
                        if you still wish to do so."
       else ()
     in
@@ -523,6 +521,6 @@ let () =
   | Timeout -> print_endline "Request Timeout"
   | ServerError e -> print_endline ("Server Error:\n" ^ e)
   | Bad_request s -> print_endline s
-  | Not_Initialized -> print_endline "Current directory has not been initialized"
+  | Not_Initialized -> print_endline "Current directory has not been initialized."
   | Unix.Unix_error _ -> print_endline ("Server Error:\nNo Connection")
   | Invalid_argument s -> print_endline s

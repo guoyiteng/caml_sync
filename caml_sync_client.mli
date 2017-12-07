@@ -31,7 +31,7 @@ val compare_file : string -> file_diff
 
 (* [check_invalid_filename ()] returns true if the local directory contains
  * any file whose filename (excluding file extension) ends with "_local" *)
-val check_invalid_filename : unit -> bool
+val check_invalid_filename : unit -> string list
 
 (* [compare_working_backup () ] returns a list of file_diff's that
  * have been modified after the last sync with the server.

@@ -13,7 +13,8 @@ exception ServerError of string
 exception Not_Initialized
 
 let week = ["Sun";"Mon";"Tue";"Wed";"Thu";"Fri";"Sat"]
-let month = ["Jan";"Feb";"Mar";"Apr";"May";"Jun";"Jul";"Aug";"Sep";"Oct";"Nov";"Dec"]
+let month = ["Jan";"Feb";"Mar";"Apr";"May";"Jun";
+             "Jul";"Aug";"Sep";"Oct";"Nov";"Dec"]
 
 let hidden_dir = ".caml_sync"
 
@@ -83,12 +84,15 @@ let post_local_diff config version_diff =
   let uri = with_path uri "diff" in
   let uri = with_scheme uri (Some "http") in
   let uri = Uri.add_query_param' uri ("token", config.token) in
-  let body = version_diff |> Core.build_version_diff_json |> Ezjsonm.to_string |> Cohttp_lwt__Body.of_string in
+  let body = version_diff |> Core.build_version_diff_json 
+             |> Ezjsonm.to_string |> Cohttp_lwt__Body.of_string in
   let request = Client.post ~body:(body) uri
     >>= fun (resp, body) ->
     let code = resp |> Response.status |> Code.code_of_status in
     if code = 401 then raise Unauthorized
-    else if code = 400 then raise (Bad_request "Bad_request when posting local diff to the server.")
+    else if code = 400 
+    then raise (Bad_request ("Bad_request when " ^ 
+                             "posting local diff to the server."))
     else try (
       body |> Cohttp_lwt.Body.to_string >|= fun body ->
       match body |> from_string with
@@ -121,7 +125,8 @@ let replace_prefix str prefix_old prefix_new =
   let open String in
   if length str < length prefix_old
   then failwith "prefix to be replaced does not exist in current string"
-  else let suffix = sub str (length prefix_old) (length str - length prefix_old) in
+  else let suffix = 
+         sub str (length prefix_old) (length str - length prefix_old) in
     prefix_new ^ suffix
 
 (* [has_prefix_in_lst str_to_check lst_prefices] checks whether [str_to_check]
@@ -151,7 +156,10 @@ let check_invalid_filename () =
   StrSet.fold
     (fun elem acc ->
        if has_prefix_in_lst elem unwanted_strs then acc (* skip this file *)
-       else if contains_local elem then StrSet.add elem acc else acc) filenames_cur StrSet.empty |> StrSet.elements
+       else if contains_local elem 
+       then StrSet.add elem acc 
+       else acc) 
+    filenames_cur StrSet.empty |> StrSet.elements
 
 let compare_working_backup () =
   let filenames_last_sync =
@@ -307,7 +315,8 @@ let get_update_diff config =
     >>= fun (resp, body) ->
     let code = resp |> Response.status |> Code.code_of_status in
     if code = 401 then raise Unauthorized
-    else if code = 400 then raise (Bad_request "Bad_request when getting diff from the server.")
+    else if code = 400 
+    then raise (Bad_request "Bad_request when getting diff from the server.")
     else
       try (
         body |> Cohttp_lwt.Body.to_string >|= fun body ->
@@ -361,7 +370,9 @@ let time_travel config v =
     >>= fun (resp, body) ->
     let code = resp |> Response.status |> Code.code_of_status in
     if code = 401 then raise Unauthorized
-    else if code = 400 then raise (Bad_request "Bad_request when getting history version from the server.")
+    else if code = 400 
+    then raise (Bad_request ("Bad_request when " 
+                             ^ "getting history version from the server."))
     else try (
       body |> Cohttp_lwt.Body.to_string >|= fun body ->
       let version_diff = body |> from_string |> parse_version_diff_json in
@@ -372,7 +383,8 @@ let time_travel config v =
 let sync () =
   let config = load_config () in
   if check_invalid_filename () <> [] then
-    print_endline "Please resolve local merge conflict before syncing with the server."
+    print_endline ("Please resolve local merge" 
+                   ^ " conflict before syncing with the server.")
   else
     let print_modified m_list =
       if m_list = [] then ()
@@ -389,8 +401,8 @@ let sync () =
         if List.exists (fun (_,deleted) -> deleted) m_list then
           print_endline "Files with [- deleted] appended have updates \
                          from the server, yet are deleted locally and are not \
-                         renamed with the [*_local] suffix. Please delete them again \
-                         if you still wish to do so."
+                         renamed with the [*_local] suffix. Please delete \
+                         them again if you still wish to do so."
       end
     in
     print_endline "Sync...";
@@ -417,47 +429,51 @@ let init url token =
   let uri = with_scheme uri (Some "http") in
   let uri = Uri.add_query_param' uri ("token", token) in
   let request =
-  Client.get uri >>= fun (resp, body) ->
-  let code = resp |> Response.status |> Code.code_of_status in
-  (* First checks if pass token test by the response status code *)
-  if code = 401 then
-    `Empty |> Cohttp_lwt.Body.to_string >|= fun _ -> raise Unauthorized
-  else
-  if code <> 200 then
-    `Empty |> Cohttp_lwt.Body.to_string >|= fun _ ->
-    raise (ServerError "unexpected response code")
-  else
-    body |> Cohttp_lwt.Body.to_string >|= fun body ->
-    match (from_string body) with
-    | `O (json) ->
-      begin match List.assoc_opt "version" json with
-        | Some v ->
-          if Sys.file_exists ".config" then
-            print_endline ("[.config] already exsits.\n" ^
-                           "It seems like the current directory has already been \
-                            initialized into a camlsync client directory.")
-          else
-            let config = {
-              client_id = "client";
-              url = url;
-              token = token;
-              version = 0
-            } in
-            update_config config;
-            remove_dir_and_files hidden_dir;
-            Unix.mkdir hidden_dir 0o770;
-            print_endline ("Successfully initialize the camlsync client.");
-            sync ()
-        | None ->
-          raise (ServerError "The address you entered does not seem to be a valid caml_sync address")
-      end
-    | _ -> raise (ServerError "The address you entered does not seem to be a valid caml_sync address")
+    Client.get uri >>= fun (resp, body) ->
+    let code = resp |> Response.status |> Code.code_of_status in
+    (* First checks if pass token test by the response status code *)
+    if code = 401 then
+      `Empty |> Cohttp_lwt.Body.to_string >|= fun _ -> raise Unauthorized
+    else
+    if code <> 200 then
+      `Empty |> Cohttp_lwt.Body.to_string >|= fun _ ->
+      raise (ServerError "unexpected response code")
+    else
+      body |> Cohttp_lwt.Body.to_string >|= fun body ->
+      match (from_string body) with
+      | `O (json) ->
+        begin match List.assoc_opt "version" json with
+          | Some v ->
+            if Sys.file_exists ".config" then
+              print_endline ("[.config] already exsits.\n" ^
+                             "It seems like the current directory has already \
+                              been initialized into a camlsync client \
+                              directory.")
+            else
+              let config = {
+                client_id = "client";
+                url = url;
+                token = token;
+                version = 0
+              } in
+              update_config config;
+              remove_dir_and_files hidden_dir;
+              Unix.mkdir hidden_dir 0o770;
+              print_endline ("Successfully initialize the camlsync client.");
+              sync ()
+          | None ->
+            raise (ServerError ("The address you entered does" 
+                                ^ " not seem to be a valid caml_sync address"))
+        end
+      | _ -> raise (ServerError ("The address you entered does" 
+                                 ^ " not seem to be a valid caml_sync address"))
   in Lwt_main.run (Lwt.pick [request; timeout ()])
 
 let delete_all_local_files () =
   let dir = "." in
   let d_handle = Unix.opendir dir in
-  let set = search_dir d_handle StrSet.add StrSet.empty [] dir (List.map (fun ele -> "_local" ^ ele) valid_extensions) in
+  let set = search_dir d_handle StrSet.add StrSet.empty [] 
+      dir (List.map (fun ele -> "_local" ^ ele) valid_extensions) in
   StrSet.iter (fun ele -> delete_file ele) set
 
 
@@ -489,7 +505,8 @@ let main () =
         if (Array.length Sys.argv) = 4 then
           init (Array.get Sys.argv 2) (Array.get Sys.argv 3)
         else init "127.0.0.1:8080" "default" )
-        with Unix.Unix_error _ -> raise (ServerError "Cannot connect to the server.")
+        with Unix.Unix_error _ -> 
+          raise (ServerError "Cannot connect to the server.")
       end
     | "clean" ->
       begin try Sys.remove ".config";
@@ -498,7 +515,8 @@ let main () =
           delete_history_folders () with
       | Sys_error e -> raise Not_Initialized
       end;
-      print_endline "All local conflict files, history version folders, camlsync hidden files and folders have been removed."
+      print_endline "All local conflict files, history version folders, \
+                     camlsync hidden files and folders have been removed."
     | "checkout" ->
       let curr_handle =
         try Unix.opendir "." with | _ -> raise Not_found
@@ -509,8 +527,11 @@ let main () =
       let hidden_handle =
         try Unix.opendir hidden_dir with | _ -> raise Not_Initialized
       in
-      let from_files = search_dir hidden_handle (List.cons) [] [] hidden_dir valid_extensions in
-      let to_files = List.map (fun file -> replace_prefix file hidden_dir ".") from_files in
+      let from_files = 
+        search_dir hidden_handle (List.cons) [] [] 
+          hidden_dir valid_extensions in
+      let to_files = 
+        List.map (fun file -> replace_prefix file hidden_dir ".") from_files in
       copy_files from_files to_files
     | "status" ->
       let cur_version = (load_config ()).version in
@@ -518,7 +539,8 @@ let main () =
       print_endline ("Current version: " ^ (string_of_int cur_version));
       if List.length f_diffs = 0 then print_endline "working directory clean"
       else List.iter (fun {file_name; is_deleted}
-                       -> let f_status = if is_deleted then "deleted" else "modified" in
+                       -> let f_status = 
+                            if is_deleted then "deleted" else "modified" in
                          print_endline (f_status ^ ": " ^  file_name)) f_diffs
     | "history" ->
       let fmt timestamp =
@@ -546,12 +568,18 @@ let main () =
       else if Array.length Sys.argv = 3 then
         let v =
           try int_of_string (Array.get Sys.argv 2)
-          with _ -> raise (Invalid_argument "The version number must be an integer which is larger than or equal to 1.")
+          with _ -> raise (Invalid_argument "The version number must be an \
+                                             integer which is larger than or \
+                                             equal to 1.")
         in
-        if v < 1 then raise (Invalid_argument "The version number must be an integer which is larger than or equal to 1.")
+        if v < 1 then raise (Invalid_argument "The version number must be an \
+                                               integer which is larger than \
+                                               or equal to 1.")
         else begin time_travel (load_config ()) v;
           let v_s = Array.get Sys.argv 2 in
-          print_endline ("Download your version " ^ v_s ^ " backup to ./camlsync_history_version_" ^ v_s ^ ".") end
+          print_endline ("Download your version " ^ v_s 
+                         ^ " backup to ./camlsync_history_version_" 
+                         ^ v_s ^ ".") end
       else raise (Invalid_argument ("Invalid arguments.\n" ^ usage))
     | "help" ->
       print_endline usage
@@ -562,7 +590,8 @@ let main () =
           print_endline "There is nothing conflict."
         else
           begin
-            print_endline "Following file(s) have sync conflicts with the server:";
+            print_endline "Following file(s) have sync \
+                           conflicts with the server:";
             List.iter (fun ele -> print_endline ("# " ^ ele) ) conflicts
           end
       else if Array.length Sys.argv = 3 && Sys.argv.(2) = "clean"

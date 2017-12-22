@@ -1,4 +1,4 @@
-# caml_sync
+# Caml Sync
 
 A OCaml-based dropbox command line clone. It supports incremental backup, history files retrival, and other basic functions.
 
